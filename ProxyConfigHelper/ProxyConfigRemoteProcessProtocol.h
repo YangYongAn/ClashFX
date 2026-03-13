@@ -34,4 +34,11 @@ typedef void(^dictReplyBlock)(NSDictionary *);
                               error:(stringReplyBlock)reply;
 
 - (void)getCurrentProxySetting:(dictReplyBlock)reply;
+
+- (void)startMihomoCoreWithBinaryPath:(NSString *)binaryPath
+                           configPath:(NSString *)configPath
+                              homeDir:(NSString *)homeDir
+                                reply:(stringReplyBlock)reply;
+
+- (void)stopMihomoCoreWithReply:(stringReplyBlock)reply;
 @end

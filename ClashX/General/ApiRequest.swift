@@ -74,6 +74,9 @@ class ApiRequest {
     private var alamoFireManager: Session
 
     static func useDirectApi() -> Bool {
+        if ConfigManager.shared.isEnhancedModeActive {
+            return false
+        }
         if ConfigManager.shared.overrideApiURL != nil {
             return false
         }
@@ -184,7 +187,6 @@ class ApiRequest {
                 case let .failure(err):
                     Logger.log("\(err)")
                     completeHandler?(ClashProviderResp())
-                    assertionFailure()
                 }
             }
     }
@@ -228,7 +230,6 @@ class ApiRequest {
 
         group.notify(queue: .main) {
             guard let proxyInfo = proxyInfo, let proxyprovider = provider else {
-                assertionFailure()
                 complete?(nil)
                 return
             }
@@ -294,7 +295,6 @@ extension ApiRequest {
             case let .success(snapshot):
                 completeHandler(snapshot.connections)
             case .failure:
-                assertionFailure()
                 completeHandler([])
             }
         }

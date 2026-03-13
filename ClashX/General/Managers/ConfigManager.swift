@@ -19,6 +19,7 @@ class ConfigManager {
     var apiSecret: String = ""
     var overrideApiURL: URL?
     var overrideSecret: String?
+    var isEnhancedModeActive = false
 
     var currentConfig: ClashConfig? {
         get {

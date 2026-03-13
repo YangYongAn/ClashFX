@@ -21,16 +21,20 @@ import (
 	"time"
 	"unsafe"
 
+	bbolt "github.com/metacubex/bbolt"
 	"github.com/metacubex/mihomo/component/mmdb"
+	"github.com/metacubex/mihomo/component/profile/cachefile"
 	"github.com/metacubex/mihomo/config"
 	"github.com/metacubex/mihomo/constant"
 	"github.com/metacubex/mihomo/hub/executor"
 	"github.com/metacubex/mihomo/hub/route"
 	"github.com/metacubex/mihomo/listener"
 	"github.com/metacubex/mihomo/log"
+	"github.com/metacubex/mihomo/tunnel"
 	"github.com/metacubex/mihomo/tunnel/statistic"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/phayes/freeport"
+	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -147,7 +151,7 @@ func parseDefaultConfigThenStart(checkPort, allowLan, ipv6 bool, proxyPort uint3
 		rawCfg.Secret = secretOverride
 	}
 	rawCfg.ExternalUI = ""
-	rawCfg.Profile.StoreSelected = false
+	rawCfg.Profile.StoreSelected = true
 	enableIPV6 = ipv6
 	rawCfg.IPv6 = ipv6
 	if len(externalController) > 0 {
@@ -431,6 +435,130 @@ func clashGetTunEnabled() bool {
 	tunMu.Lock()
 	defer tunMu.Unlock()
 	return tunEnabled
+}
+
+//export clashSuspendCore
+func clashSuspendCore() {
+	// Close all proxy listeners to free ports for external mihomo_core
+	listener.ReCreateHTTP(0, tunnel.Tunnel)
+	listener.ReCreateSocks(0, tunnel.Tunnel)
+	listener.ReCreateMixed(0, tunnel.Tunnel)
+	listener.ReCreateRedir(0, tunnel.Tunnel)
+	listener.ReCreateTProxy(0, tunnel.Tunnel)
+	// Close the RESTful API server so external binary can use the same port
+	route.ReCreateServer(&route.Config{})
+	// Release cache.db file lock so external mihomo_core can open it
+	cache := cachefile.Cache()
+	if cache.DB != nil {
+		cache.DB.Close()
+	}
+}
+
+//export clashResumeCore
+func clashResumeCore() *C.char {
+	// Reopen cache.db that was closed in clashSuspendCore
+	cache := cachefile.Cache()
+	db, err := bbolt.Open(constant.Path.Cache(), 0o666, &bbolt.Options{Timeout: time.Second})
+	if err == nil {
+		cache.DB = db
+	}
+
+	cfg, err := parseDefaultConfigThenStart(false, false, enableIPV6, 0, "")
+	if err != nil {
+		return C.CString(err.Error())
+	}
+	_ = cfg
+	return C.CString("success")
+}
+
+//export clashWriteEnhancedConfig
+func clashWriteEnhancedConfig(outputPath *C.char) *C.char {
+	buf, err := readConfig(constant.Path.Config())
+	if err != nil {
+		return C.CString("error:" + err.Error())
+	}
+
+	var rawMap map[string]interface{}
+	if err := yaml.Unmarshal(buf, &rawMap); err != nil {
+		return C.CString("error:" + err.Error())
+	}
+
+	rawMap["tun"] = map[string]interface{}{
+		"enable":                true,
+		"stack":                 "gVisor",
+		"auto-route":            true,
+		"auto-detect-interface": true,
+		"dns-hijack":            []string{"0.0.0.0:53"},
+	}
+
+	dns, _ := rawMap["dns"].(map[string]interface{})
+	if dns == nil {
+		dns = map[string]interface{}{}
+	}
+	dns["enable"] = true
+	if mode, _ := dns["enhanced-mode"].(string); mode == "" || mode == "normal" {
+		dns["enhanced-mode"] = "fake-ip"
+	}
+	if fir, _ := dns["fake-ip-range"].(string); fir == "" {
+		dns["fake-ip-range"] = "198.18.0.1/16"
+	}
+	if dns["nameserver"] == nil {
+		dns["nameserver"] = []string{"https://doh.pub/dns-query", "tls://223.5.5.5:853"}
+	}
+	if dns["default-nameserver"] == nil {
+		dns["default-nameserver"] = []string{"114.114.114.114", "223.5.5.5", "8.8.8.8"}
+	}
+	rawMap["dns"] = dns
+
+	ec, _ := rawMap["external-controller"].(string)
+	if ec == "" {
+		if port, err := freeport.GetFreePort(); err == nil {
+			ec = "127.0.0.1:" + strconv.Itoa(port)
+		} else {
+			ec = "127.0.0.1:9090"
+		}
+		rawMap["external-controller"] = ec
+	}
+
+	if secretOverride != "" {
+		rawMap["secret"] = secretOverride
+	}
+	rawMap["ipv6"] = enableIPV6
+
+	profile, _ := rawMap["profile"].(map[string]interface{})
+	if profile == nil {
+		profile = map[string]interface{}{}
+	}
+	profile["store-selected"] = true
+	rawMap["profile"] = profile
+
+	mixedPort, _ := rawMap["mixed-port"].(int)
+	httpPort, _ := rawMap["port"].(int)
+	socksPort, _ := rawMap["socks-port"].(int)
+	if mixedPort == 0 && httpPort == 0 && socksPort == 0 {
+		rawMap["mixed-port"] = 7890
+	}
+
+	data, err := yaml.Marshal(rawMap)
+	if err != nil {
+		return C.CString("error:" + err.Error())
+	}
+
+	path := C.GoString(outputPath)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return C.CString("error:" + err.Error())
+	}
+
+	secret, _ := rawMap["secret"].(string)
+	portInfo := map[string]string{
+		"externalController": ec,
+		"secret":             secret,
+	}
+	jsonString, err := json.Marshal(portInfo)
+	if err != nil {
+		return C.CString("error:" + err.Error())
+	}
+	return C.CString(string(jsonString))
 }
 
 func main() {

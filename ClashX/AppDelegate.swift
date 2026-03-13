@@ -139,10 +139,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // start proxy
         Logger.log("initClashCore")
         initClashCore()
-        if Settings.enhancedMode {
-            Logger.log("Restoring Enhanced Mode state")
-            clashPresetTunEnabled(true.goObject())
-        }
         Logger.log("initClashCore finish")
         setupData()
         runAfterConfigReload = { [weak self] in
@@ -152,6 +148,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updateConfig(showNotification: false)
         updateLoggingLevel()
+        restoreEnhancedModeIfNeeded()
 
         // start watch config file change
         ConfigManager.watchCurrentConfigFile()
@@ -171,6 +168,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ aNotification: Notification) {
         UserDefaults.standard.set(0, forKey: "launch_fail_times")
         Logger.log("ClashX will terminate")
+        if ConfigManager.shared.isEnhancedModeActive {
+            PrivilegedHelperManager.shared.helper()?.stopMihomoCore { _ in }
+        }
         if NetworkChangeNotifier.isCurrentSystemSetToClash(looser: true) ||
             NetworkChangeNotifier.hasInterfaceProxySetToClash() {
             Logger.log("Need Reset Proxy Setting again", level: .error)
@@ -606,30 +606,127 @@ extension AppDelegate {
 
     @IBAction func actionToggleEnhancedMode(_ sender: NSMenuItem) {
         let newState = !Settings.enhancedMode
-        Settings.enhancedMode = newState
-        enhancedModeMenuItem.state = newState ? .on : .off
-
         guard ConfigManager.shared.isRunning else { return }
+        enhancedModeMenuItem.isEnabled = false
 
-        let result = clashSetTunEnabled(newState.goObject())?.toString() ?? ""
-        if result == "success" {
-            Logger.log("Enhanced Mode \(newState ? "enabled" : "disabled")")
-            syncConfig()
+        let completion: (String?) -> Void = { [weak self] error in
+            guard let self = self else { return }
+            self.enhancedModeMenuItem.isEnabled = true
+            if let error = error {
+                Settings.enhancedMode = !newState
+                self.enhancedModeMenuItem.state = !newState ? .on : .off
+                Logger.log("Enhanced Mode toggle failed: \(error)", level: .error)
+                NSUserNotificationCenter.default.postConfigErrorNotice(msg: error)
+            } else {
+                Settings.enhancedMode = newState
+                self.enhancedModeMenuItem.state = newState ? .on : .off
+                Logger.log("Enhanced Mode \(newState ? "enabled" : "disabled")")
+                let info = newState ? "Enhanced Mode Enabled" : "Enhanced Mode Disabled"
+                NSUserNotificationCenter.default
+                    .post(title: NSLocalizedString("Enhanced Mode", comment: ""),
+                          info: NSLocalizedString(info, comment: ""))
+            }
+            self.syncConfig()
             MenuItemFactory.recreateProxyMenuItems()
-            resetStreamApi()
-            let info = newState ? "Enhanced Mode Enabled" : "Enhanced Mode Disabled"
-            NSUserNotificationCenter.default
-                .post(title: NSLocalizedString("Enhanced Mode", comment: ""),
-                      info: NSLocalizedString(info, comment: ""))
+            self.resetStreamApi()
+        }
+
+        if newState {
+            enableEnhancedMode(completion: completion)
         } else {
-            Settings.enhancedMode = !newState
-            enhancedModeMenuItem.state = !newState ? .on : .off
-            Logger.log("Enhanced Mode toggle failed: \(result)", level: .error)
-            syncConfig()
-            MenuItemFactory.recreateProxyMenuItems()
-            resetStreamApi()
-            NSUserNotificationCenter.default
-                .postConfigErrorNotice(msg: result)
+            disableEnhancedMode(completion: completion)
+        }
+    }
+
+    private func enableEnhancedMode(completion: @escaping (String?) -> Void) {
+        let tempConfigPath = kConfigFolderPath + ".enhanced_config.yaml"
+        let writeResult = clashWriteEnhancedConfig(tempConfigPath.goStringBuffer())?.toString() ?? ""
+        guard !writeResult.hasPrefix("error:") else {
+            completion(writeResult)
+            return
+        }
+
+        guard let jsonData = writeResult.data(using: .utf8),
+              let portInfo = try? JSONSerialization.jsonObject(with: jsonData) as? [String: String],
+              let extController = portInfo["externalController"],
+              let port = extController.components(separatedBy: ":").last else {
+            completion("Failed to parse enhanced config info")
+            return
+        }
+        let secret = portInfo["secret"] ?? ""
+
+        guard let binaryPath = Bundle.main.path(forResource: "mihomo_core", ofType: nil) else {
+            completion("mihomo_core binary not found in app bundle")
+            return
+        }
+
+        clashSuspendCore()
+
+        PrivilegedHelperManager.shared.helper()?.startMihomoCore(
+            withBinaryPath: binaryPath,
+            configPath: tempConfigPath,
+            homeDir: kConfigFolderPath
+        ) { [weak self] error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    _ = clashResumeCore()
+                    completion(error)
+                } else {
+                    ConfigManager.shared.apiPort = port
+                    ConfigManager.shared.apiSecret = secret
+                    ConfigManager.shared.isEnhancedModeActive = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        self?.syncConfig()
+                        self?.resetStreamApi()
+                        completion(nil)
+                    }
+                }
+            }
+        }
+    }
+
+    private func disableEnhancedMode(completion: @escaping (String?) -> Void) {
+        PrivilegedHelperManager.shared.helper()?.stopMihomoCore { [weak self] _ in
+            DispatchQueue.main.async {
+                ConfigManager.shared.isEnhancedModeActive = false
+                self?.startProxy()
+                if ConfigManager.shared.isRunning {
+                    completion(nil)
+                } else {
+                    completion("Failed to restart built-in core")
+                }
+            }
+        }
+    }
+
+    private func restoreEnhancedModeIfNeeded() {
+        guard Settings.enhancedMode, ConfigManager.shared.isRunning else { return }
+
+        let restore: () -> Void = { [weak self] in
+            self?.enhancedModeMenuItem.isEnabled = false
+            self?.enableEnhancedMode { [weak self] error in
+                self?.enhancedModeMenuItem.isEnabled = true
+                if let error = error {
+                    Settings.enhancedMode = false
+                    self?.enhancedModeMenuItem.state = .off
+                    Logger.log("Failed to restore Enhanced Mode: \(error)", level: .error)
+                } else {
+                    self?.enhancedModeMenuItem.state = .on
+                    Logger.log("Enhanced Mode restored successfully")
+                    self?.resetStreamApi()
+                }
+            }
+        }
+
+        if PrivilegedHelperManager.shared.isHelperCheckFinished.value {
+            restore()
+        } else {
+            PrivilegedHelperManager.shared.isHelperCheckFinished
+                .filter { $0 }
+                .take(1)
+                .observe(on: MainScheduler.instance)
+                .subscribe(onNext: { _ in restore() })
+                .disposed(by: disposeBag)
         }
     }
 

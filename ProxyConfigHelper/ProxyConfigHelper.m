@@ -21,6 +21,7 @@ ProxyConfigRemoteProcessProtocol
 @property (nonatomic, strong) NSMutableSet<NSXPCConnection *> *connections;
 @property (nonatomic, strong) NSTimer *checkTimer;
 @property (nonatomic, assign) BOOL shouldQuit;
+@property (nonatomic, strong) NSTask *mihomoTask;
 
 @end
 
@@ -47,7 +48,7 @@ ProxyConfigRemoteProcessProtocol
 }
 
 - (void)connectionCheckOnLaunch {
-    if (self.connections.count == 0) {
+    if (self.connections.count == 0 && !(self.mihomoTask && self.mihomoTask.isRunning)) {
         self.shouldQuit = YES;
     }
 }
@@ -70,7 +71,7 @@ ProxyConfigRemoteProcessProtocol
     __weak ProxyConfigHelper *weakSelf = self;
     newConnection.invalidationHandler = ^{
         [weakSelf.connections removeObject:weakConnection];
-        if (weakSelf.connections.count == 0) {
+        if (weakSelf.connections.count == 0 && !(weakSelf.mihomoTask && weakSelf.mihomoTask.isRunning)) {
             weakSelf.shouldQuit = YES;
         }
     };
@@ -129,5 +130,53 @@ ProxyConfigRemoteProcessProtocol
     });
 }
 
+- (void)startMihomoCoreWithBinaryPath:(NSString *)binaryPath
+                           configPath:(NSString *)configPath
+                              homeDir:(NSString *)homeDir
+                                reply:(stringReplyBlock)reply {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (self.mihomoTask && self.mihomoTask.isRunning) {
+            [self.mihomoTask terminate];
+            self.mihomoTask = nil;
+        }
+
+        if (![[NSFileManager defaultManager] fileExistsAtPath:binaryPath]) {
+            reply([NSString stringWithFormat:@"Binary not found: %@", binaryPath]);
+            return;
+        }
+
+        NSTask *task = [[NSTask alloc] init];
+        task.executableURL = [NSURL fileURLWithPath:binaryPath];
+        task.arguments = @[@"-f", configPath, @"-d", homeDir];
+
+        NSPipe *pipe = [NSPipe pipe];
+        task.standardOutput = pipe;
+        task.standardError = pipe;
+
+        NSError *error = nil;
+        [task launchAndReturnError:&error];
+        if (error) {
+            reply([NSString stringWithFormat:@"Launch failed: %@", error.localizedDescription]);
+            return;
+        }
+
+        self.mihomoTask = task;
+        reply(nil);
+    });
+}
+
+- (void)stopMihomoCoreWithReply:(stringReplyBlock)reply {
+    NSTask *task = self.mihomoTask;
+    self.mihomoTask = nil;
+    if (task && task.isRunning) {
+        [task terminate];
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            [task waitUntilExit];
+            reply(nil);
+        });
+    } else {
+        reply(nil);
+    }
+}
 
 @end

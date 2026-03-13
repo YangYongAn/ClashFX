@@ -14,6 +14,7 @@ ClashX/clash/
 .vscode
 ClashX/goClash/goClash.h
 ClashX/goClash/goClash.a
+ClashX/goClash/mihomo_core
 fastlane/report.xml
 ClashX/Resources/Country.mmdb.gz
 .bundle/config

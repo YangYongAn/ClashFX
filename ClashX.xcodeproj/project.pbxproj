@@ -124,6 +124,7 @@
 		F977FAAE23669D6400C17F1F /* ConnectionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F977FAAD23669D6400C17F1F /* ConnectionManager.swift */; };
 		F9A7C06C2306E874007163C7 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = F9A7C06B2306E874007163C7 /* main.m */; };
 		F9C180A3243C6590005EE8C4 /* goClash.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F9C180A1243C6590005EE8C4 /* goClash.a */; };
+		E1B0C0A1290A0001005EE8C4 /* mihomo_core in Resources */ = {isa = PBXBuildFile; fileRef = E1B0C0A0290A0001005EE8C4 /* mihomo_core */; };
 		F9E754D0239CC21F00CEE7CC /* WebPortalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E754CF239CC21F00CEE7CC /* WebPortalManager.swift */; };
 		F9E754D2239CC28D00CEE7CC /* NSAlert+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E754D1239CC28D00CEE7CC /* NSAlert+Extension.swift */; };
 		F9E8F34623A12B89002DE5E8 /* String+Encode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9E8F34523A12B89002DE5E8 /* String+Encode.swift */; };
@@ -303,6 +304,7 @@
 		F9A7C06B2306E874007163C7 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		F9C180A1243C6590005EE8C4 /* goClash.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = goClash.a; path = ClashX/goClash/goClash.a; sourceTree = SOURCE_ROOT; };
 		F9C180A2243C6590005EE8C4 /* goClash.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = goClash.h; path = ClashX/goClash/goClash.h; sourceTree = SOURCE_ROOT; };
+		E1B0C0A0290A0001005EE8C4 /* mihomo_core */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = mihomo_core; path = ClashX/goClash/mihomo_core; sourceTree = SOURCE_ROOT; };
 		F9E754CF239CC21F00CEE7CC /* WebPortalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebPortalManager.swift; sourceTree = "<group>"; };
 		F9E754D1239CC28D00CEE7CC /* NSAlert+Extension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSAlert+Extension.swift"; sourceTree = "<group>"; };
 		F9E8F34523A12B89002DE5E8 /* String+Encode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Encode.swift"; sourceTree = "<group>"; };
@@ -629,6 +631,7 @@
 			children = (
 				F9C180A1243C6590005EE8C4 /* goClash.a */,
 				F9C180A2243C6590005EE8C4 /* goClash.h */,
+				E1B0C0A0290A0001005EE8C4 /* mihomo_core */,
 				4981C88D216BAE4A008CC14A /* Localizable.strings */,
 			);
 			path = "Support Files";
@@ -812,6 +815,7 @@
 				499A485A22ED781100F6C675 /* RemoteConfigAddView.xib in Resources */,
 				4929F610258CD22E00A435F6 /* menu_icon@2x.png in Resources */,
 				4989F98E20D0AE990001E564 /* sampleConfig.yaml in Resources */,
+				E1B0C0A1290A0001005EE8C4 /* mihomo_core in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

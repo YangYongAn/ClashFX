@@ -46,6 +46,27 @@ def mergeLibs():
     subprocess.check_output(command, shell=True)
 
 
+def build_mihomo_bin(version, build_time, arch):
+    command = f"""
+{go_bin} build -trimpath -ldflags '-X "github.com/metacubex/mihomo/constant.Version={version}" \
+-X "github.com/metacubex/mihomo/constant.BuildTime={build_time}"' \
+-o mihomo_core_{arch} ./mihomo-bin/ """
+    envs = os.environ.copy()
+    envs.update(
+        {
+            "GOOS": "darwin",
+            "GOARCH": arch,
+            "CGO_ENABLED": "0",
+        }
+    )
+    subprocess.check_output(command, shell=True, env=envs)
+
+
+def mergeMihomoBins():
+    command = "lipo mihomo_core_arm64 mihomo_core_amd64 -create -output mihomo_core"
+    subprocess.check_output(command, shell=True)
+
+
 def clean():
     cmd = "rm -f *amd* *arm*"
     subprocess.check_output(cmd, shell=True)
@@ -70,13 +91,19 @@ def run():
     print("current clash version:", version)
     build_time = datetime.datetime.now().strftime("%Y-%m-%d-%H%M")
     print("clean existing")
-    subprocess.check_output("rm -f *Clash*.h *.a", shell=True)
-    print("create arm64")
+    subprocess.check_output("rm -f *Clash*.h *.a mihomo_core_*", shell=True)
+    print("create arm64 library")
     build_clash(version, build_time, "arm64")
-    print("create amd64")
+    print("create amd64 library")
     build_clash(version, build_time, "amd64")
-    print("merge")
+    print("merge libraries")
     mergeLibs()
+    print("create arm64 mihomo-bin")
+    build_mihomo_bin(version, build_time, "arm64")
+    print("create amd64 mihomo-bin")
+    build_mihomo_bin(version, build_time, "amd64")
+    print("merge mihomo-bin")
+    mergeMihomoBins()
     print("clean")
     clean()
     if os.environ.get("CI", False) or os.environ.get("GITHUB_ACTIONS", False):
