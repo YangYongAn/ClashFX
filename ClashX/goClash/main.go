@@ -454,14 +454,21 @@ func clashSuspendCore() {
 	}
 }
 
-//export clashResumeCore
-func clashResumeCore() *C.char {
-	// Reopen cache.db that was closed in clashSuspendCore
+//export clashReopenCacheDB
+func clashReopenCacheDB() {
 	cache := cachefile.Cache()
+	if cache.DB != nil {
+		return
+	}
 	db, err := bbolt.Open(constant.Path.Cache(), 0o666, &bbolt.Options{Timeout: time.Second})
 	if err == nil {
 		cache.DB = db
 	}
+}
+
+//export clashResumeCore
+func clashResumeCore() *C.char {
+	clashReopenCacheDB()
 
 	cfg, err := parseDefaultConfigThenStart(false, false, enableIPV6, 0, "")
 	if err != nil {

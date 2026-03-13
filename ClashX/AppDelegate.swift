@@ -675,7 +675,7 @@ extension AppDelegate {
                     ConfigManager.shared.apiPort = port
                     ConfigManager.shared.apiSecret = secret
                     ConfigManager.shared.isEnhancedModeActive = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    self?.waitForExternalCore(port: port, secret: secret, retriesLeft: 10) {
                         self?.syncConfig()
                         self?.resetStreamApi()
                         completion(nil)
@@ -685,10 +685,35 @@ extension AppDelegate {
         }
     }
 
+    private func waitForExternalCore(port: String, secret: String, retriesLeft: Int, ready: @escaping () -> Void) {
+        let url = URL(string: "http://127.0.0.1:\(port)/configs")!
+        var request = URLRequest(url: url, timeoutInterval: 2)
+        if !secret.isEmpty {
+            request.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
+        }
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                    Logger.log("External core API ready on port \(port)")
+                    ready()
+                } else if retriesLeft > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        self?.waitForExternalCore(port: port, secret: secret, retriesLeft: retriesLeft - 1, ready: ready)
+                    }
+                } else {
+                    Logger.log("External core API not responding after retries, proceeding anyway", level: .warning)
+                    ready()
+                }
+            }
+        }.resume()
+    }
+
     private func disableEnhancedMode(completion: @escaping (String?) -> Void) {
         PrivilegedHelperManager.shared.helper()?.stopMihomoCore { [weak self] _ in
             DispatchQueue.main.async {
                 ConfigManager.shared.isEnhancedModeActive = false
+                ConfigManager.shared.isRunning = false
+                clashReopenCacheDB()
                 self?.startProxy()
                 if ConfigManager.shared.isRunning {
                     completion(nil)
