@@ -1,13 +1,7 @@
-//
-//  Paths.swift
-//  ClashX
-//
-//  Created by CYC on 2018/8/26.
-//  Copyright © 2018年 west2online. All rights reserved.
-//
 import Foundation
 
-let kConfigFolderPath = "\(NSHomeDirectory())/.config/clash/"
+let kConfigFolderPath = "\(NSHomeDirectory())/.config/clashfx/"
+let kLegacyConfigFolderPath = "\(NSHomeDirectory())/.config/clash/"
 
 let kDefaultConfigFilePath = "\(kConfigFolderPath)config.yaml"
 
@@ -18,5 +12,20 @@ enum Paths {
 
     static func configFileName(for name: String) -> String {
         return "\(name).yaml"
+    }
+
+    static func migrateFromLegacyIfNeeded() {
+        let fm = FileManager.default
+        var isDir: ObjCBool = true
+
+        guard !fm.fileExists(atPath: kConfigFolderPath, isDirectory: &isDir) else { return }
+        guard fm.fileExists(atPath: kLegacyConfigFolderPath, isDirectory: &isDir), isDir.boolValue else { return }
+
+        do {
+            try fm.copyItem(atPath: kLegacyConfigFolderPath, toPath: kConfigFolderPath)
+            NSLog("[ClashFX] Migrated config from %@ to %@", kLegacyConfigFolderPath, kConfigFolderPath)
+        } catch {
+            NSLog("[ClashFX] Config migration failed: %@", error.localizedDescription)
+        }
     }
 }

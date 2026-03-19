@@ -32,7 +32,7 @@
 "Cancel" = "Cancel";
 
 /* No comment provided by engineer. */
-"ClashFX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashFX." = "ClashFX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashFX.";
+"ClashFX fail to create ~/.config/clashfx folder. Please check privileges or manually create folder and restart ClashFX." = "ClashFX fail to create ~/.config/clashfx folder. Please check privileges or manually create folder and restart ClashFX.";
 
 /* No comment provided by engineer. */
 "ClashFX needs to install/update a helper tool with administrator privileges, otherwise ClashFX won't be able to configure system proxy." = "ClashFX needs to install/update a helper tool with administrator privileges, otherwise ClashFX won't be able to configure system proxy.";

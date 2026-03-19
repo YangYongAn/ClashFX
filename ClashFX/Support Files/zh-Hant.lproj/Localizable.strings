@@ -32,7 +32,7 @@
 "Cancel" = "取消";
 
 /* No comment provided by engineer. */
-"ClashFX fail to create ~/.config/clash folder. Please check privileges or manually create folder and restart ClashFX." = "ClashFX 創建 ~/.config/clash 文件夾失敗，請檢查權限設定或者手動創建文件夾後重啟 ClashFX";
+"ClashFX fail to create ~/.config/clashfx folder. Please check privileges or manually create folder and restart ClashFX." = "ClashFX 創建 ~/.config/clashfx 文件夾失敗，請檢查權限設定或者手動創建文件夾後重啟 ClashFX";
 
 /* No comment provided by engineer. */
 "ClashFX needs to install/update a helper tool with administrator privileges, otherwise ClashFX won't be able to configure system proxy." = "ClashFX 需要使用管理員權限安裝/更新一個幫助程序，否則 ClashFX 將無法設定系統代理。";
