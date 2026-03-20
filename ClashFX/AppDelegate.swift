@@ -1081,10 +1081,18 @@ extension AppDelegate {
     }
 
     private func restartApp() {
-        let url = URL(fileURLWithPath: Bundle.main.bundlePath)
-        let config = NSWorkspace.OpenConfiguration()
-        config.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in }
+        let path = Bundle.main.bundlePath
+        if #available(macOS 10.15, *) {
+            let url = URL(fileURLWithPath: path)
+            let config = NSWorkspace.OpenConfiguration()
+            config.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in }
+        } else {
+            let task = Process()
+            task.launchPath = "/bin/sh"
+            task.arguments = ["-c", "sleep 0.5 && open \"\(path)\""]
+            task.launch()
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             NSApp.terminate(nil)
         }
@@ -1114,6 +1122,10 @@ extension AppDelegate {
 // MARK: Config actions
 
 extension AppDelegate {
+    @IBAction func actionOpenConfigEditor(_ sender: Any) {
+        ConfigEditorWindowController.show()
+    }
+
     @IBAction func openConfigFolder(_ sender: Any) {
         if ICloudManager.shared.useiCloud.value {
             ICloudManager.shared.getUrl {
