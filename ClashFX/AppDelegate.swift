@@ -1027,6 +1027,8 @@ extension AppDelegate {
         ("en", "English"),
         ("zh-Hans", "简体中文"),
         ("zh-Hant", "繁體中文"),
+        ("ja", "日本語"),
+        ("ru", "Русский"),
     ]
 
     func setupLanguageMenu() {
@@ -1079,12 +1081,13 @@ extension AppDelegate {
     }
 
     private func restartApp() {
-        let path = Bundle.main.bundlePath
-        let task = Process()
-        task.launchPath = "/bin/sh"
-        task.arguments = ["-c", "sleep 0.5 && open \"\(path)\""]
-        task.launch()
-        NSApp.terminate(nil)
+        let url = URL(fileURLWithPath: Bundle.main.bundlePath)
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, _ in }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NSApp.terminate(nil)
+        }
     }
 }
 

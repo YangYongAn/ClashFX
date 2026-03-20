@@ -211,6 +211,12 @@
 		4981C887216BAB8A008CC14A /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Main.strings"; sourceTree = "<group>"; };
 		4981C88C216BAE4A008CC14A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		4981C88E216BAE4D008CC14A /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		CF000001CLASHFXJA01 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = "ja.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		CF000002CLASHFXRU01 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = "ru.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		CF000003CLASHFXJA02 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = "ja.lproj/Main.strings"; sourceTree = "<group>"; };
+		CF000004CLASHFXRU02 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = "ru.lproj/Main.strings"; sourceTree = "<group>"; };
+		CF000005CLASHFXJA03 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = "ja.lproj/ConnectionDetailInfoGeneralView.strings"; sourceTree = "<group>"; };
+		CF000006CLASHFXRU03 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = "ru.lproj/ConnectionDetailInfoGeneralView.strings"; sourceTree = "<group>"; };
 		4982F51E2344A216008804B0 /* Cgo+Convert.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Cgo+Convert.swift"; sourceTree = "<group>"; };
 		49862F9F218418C600A1D5EC /* ClashRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClashRule.swift; sourceTree = "<group>"; };
 		49870ADA2AA75DC7002B106B /* TerminalCleanUpAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalCleanUpAction.swift; sourceTree = "<group>"; };
@@ -1061,6 +1067,8 @@
 				4969E73E2A5E3CB20012E005 /* Base */,
 				4969E7412A5E3CB80012E005 /* zh-Hans */,
 				4969E7432A5E3CB90012E005 /* zh-Hant */,
+				CF000005CLASHFXJA03 /* ja */,
+				CF000006CLASHFXRU03 /* ru */,
 			);
 			name = ConnectionDetailInfoGeneralView.xib;
 			sourceTree = "<group>";
@@ -1071,6 +1079,8 @@
 				4981C88C216BAE4A008CC14A /* en */,
 				4981C88E216BAE4D008CC14A /* zh-Hans */,
 				496C16472A3418C80052064A /* zh-Hant */,
+				CF000001CLASHFXJA01 /* ja */,
+				CF000002CLASHFXRU01 /* ru */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";
@@ -1081,6 +1091,8 @@
 				49CF3B2720CD7465001EBF94 /* Base */,
 				4981C887216BAB8A008CC14A /* zh-Hans */,
 				496C16462A3418C80052064A /* zh-Hant */,
+				CF000003CLASHFXJA02 /* ja */,
+				CF000004CLASHFXRU02 /* ru */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
