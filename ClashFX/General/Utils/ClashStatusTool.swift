@@ -9,11 +9,24 @@
 import Cocoa
 
 class ClashStatusTool {
+    private static var portCheckRetried = false
+
     static func checkPortConfig(cfg: ClashConfig?) {
         guard ConfigManager.shared.isRunning else { return }
         guard let cfg = cfg else { return }
         if cfg.usedHttpPort == 0 {
-            Logger.log("checkPortConfig: \(cfg.mixedPort) ", level: .error)
+            Logger.log("checkPortConfig: port 0, mixedPort: \(cfg.mixedPort)", level: .error)
+
+            if !portCheckRetried {
+                portCheckRetried = true
+                Logger.log("checkPortConfig: retrying after killing stale processes...", level: .warning)
+                killStaleMihomoCore()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    AppDelegate.shared.startProxy()
+                }
+                return
+            }
+
             let alert = NSAlert()
             alert.messageText = NSLocalizedString("ClashFX Start Error!", comment: "")
             alert.informativeText = NSLocalizedString("Ports Open Fail, Please try to restart ClashFX", comment: "")
@@ -26,6 +39,12 @@ class ClashStatusTool {
                 }
                 NSApp.terminate(nil)
             }
+        }
+    }
+
+    private static func killStaleMihomoCore() {
+        PrivilegedHelperManager.shared.helper()?.stopMihomoCore { _ in
+            Logger.log("checkPortConfig: stale mihomo_core cleanup attempted")
         }
     }
 }

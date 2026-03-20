@@ -407,14 +407,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func updateProxyList(withMenus menus: [NSMenuItem]) {
+        guard !menus.isEmpty else { return }
         let startIndex = statusMenu.items.firstIndex(of: separatorLineTop)! + 1
         let endIndex = statusMenu.items.firstIndex(of: sepatatorLineEndProxySelect)!
-        sepatatorLineEndProxySelect.isHidden = menus.isEmpty
-        for _ in 0 ..< endIndex - startIndex {
-            statusMenu.removeItem(at: startIndex)
-        }
+        sepatatorLineEndProxySelect.isHidden = false
         for each in menus {
             statusMenu.insertItem(each, at: startIndex)
+        }
+        let removeStart = startIndex + menus.count
+        let removeEnd = statusMenu.items.firstIndex(of: sepatatorLineEndProxySelect)!
+        for _ in 0 ..< removeEnd - removeStart {
+            statusMenu.removeItem(at: removeStart)
         }
     }
 
@@ -649,9 +652,13 @@ extension AppDelegate {
                     .post(title: NSLocalizedString("Enhanced Mode", comment: ""),
                           info: NSLocalizedString(info, comment: ""))
             }
-            self.syncConfig()
-            MenuItemFactory.recreateProxyMenuItems()
-            self.resetStreamApi()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.syncConfig()
+                self.resetStreamApi()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    MenuItemFactory.recreateProxyMenuItems()
+                }
+            }
         }
 
         if newState {

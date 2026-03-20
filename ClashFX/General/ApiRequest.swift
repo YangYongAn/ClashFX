@@ -91,8 +91,10 @@ class ApiRequest {
                 case let .success(config):
                     completeHandler(config)
                 case let .failure(err):
-                    Logger.log(err.localizedDescription)
-                    NSUserNotificationCenter.default.post(title: "Error", info: err.localizedDescription)
+                    Logger.log("requestConfig: \(err.localizedDescription)")
+                    if ConfigManager.shared.isRunning, !ConfigManager.shared.isEnhancedModeActive {
+                        NSUserNotificationCenter.default.post(title: "Error", info: err.localizedDescription)
+                    }
                 }
             }
             return

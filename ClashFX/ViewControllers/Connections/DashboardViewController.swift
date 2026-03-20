@@ -110,14 +110,16 @@ extension DashboardViewController: NSToolbarDelegate {
     func toolbar(_ toolbar: NSToolbar, itemForItemIdentifier itemIdentifier: NSToolbarItem.Identifier, willBeInsertedIntoToolbar flag: Bool) -> NSToolbarItem? {
         let item = NSToolbarItem(itemIdentifier: itemIdentifier)
         if itemIdentifier == .toolbarSearchItem {
-            item.maxSize = NSSize(width: 200, height: 40)
             searchField.sizeToFit()
+            searchField.translatesAutoresizingMaskIntoConstraints = false
+            searchField.widthAnchor.constraint(lessThanOrEqualToConstant: 200).isActive = true
             item.view = searchField
         } else if itemIdentifier == .toolbarSegmentItem {
             if #available(macOS 11.0, *) {
                 item.isNavigational = true
             }
-            item.minSize = CGSize(width: 300, height: 34)
+            segmentControl.translatesAutoresizingMaskIntoConstraints = false
+            segmentControl.widthAnchor.constraint(greaterThanOrEqualToConstant: 300).isActive = true
             item.view = segmentControl
         }
 
