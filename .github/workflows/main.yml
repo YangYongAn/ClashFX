@@ -91,6 +91,12 @@ jobs:
 
         echo "Build complete!"
 
+    - name: free disk space
+      run: |
+        rm -rf build_derived_data
+        rm -rf ~/Library/Developer/Xcode/DerivedData
+        echo "Freed disk space: $(df -h / | tail -1 | awk '{print $4}') available"
+
     - name: create dmg
       if: startsWith(github.ref, 'refs/tags/') || contains(github.event.head_commit.message, '[beta]')
       run: |
