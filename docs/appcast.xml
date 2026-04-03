@@ -10,6 +10,24 @@
   <description><![CDATA[
     <h2>ClashFX v1.0.6</h2><ul><li><strong>Fix dashboard top spacing</strong> — Reduce excess blank space at the top of the content area caused by the previous traffic-light overlap fix. Overview cards now render flush below the title bar without scrolling</li><li><strong>Fix traffic light button overlap</strong> — Prevent the dashboard sidebar from covering macOS window control buttons</li></ul>
   ]]></description>
+  <pubDate>Fri, 03 Apr 2026 15:14:02 +0000</pubDate>
+  <sparkle:version>1.0.6</sparkle:version>
+  <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
+  <sparkle:minimumSystemVersion>10.14</sparkle:minimumSystemVersion>
+  <enclosure
+    url="https://github.com/Clash-FX/ClashFX/releases/download/1.0.6/ClashFX.dmg"
+    sparkle:version="1.0.6"
+    sparkle:shortVersionString="1.0.6"
+    sparkle:edSignature="qmh1rB3a5mVFetJKtaXmvrqXMDvBr0qxPSzlJNzypTn4rw4lF/J+mmAHr9hdSPYGZmnTckZyV6WXBsXiH3jkDg=="
+    length="95972203"
+    type="application/octet-stream"
+  />
+</item>
+    <item>
+  <title>Version 1.0.6</title>
+  <description><![CDATA[
+    <h2>ClashFX v1.0.6</h2><ul><li><strong>Fix dashboard top spacing</strong> — Reduce excess blank space at the top of the content area caused by the previous traffic-light overlap fix. Overview cards now render flush below the title bar without scrolling</li><li><strong>Fix traffic light button overlap</strong> — Prevent the dashboard sidebar from covering macOS window control buttons</li></ul>
+  ]]></description>
   <pubDate>Fri, 03 Apr 2026 14:49:18 +0000</pubDate>
   <sparkle:version>1.0.6</sparkle:version>
   <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
