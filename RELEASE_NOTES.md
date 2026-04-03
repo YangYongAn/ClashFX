@@ -1,13 +1,13 @@
-## ClashFX 1.0.5
+## ClashFX 1.0.6
 
-### Improvements
+### Bug Fixes
 
-- **Switch to metacubexd dashboard** — Replace Yacd-meta with the official MetaCubeX dashboard. Fixes empty log page and connection panel layout issues. Smaller bundle (3.2 MB vs 6.9 MB)
-- **Robust dashboard upgrade** — Dashboard files are now reliably replaced on every app update, even when old files have restricted permissions
+- **Fix dashboard top spacing** — Reduce excess blank space at the top of the content area caused by the previous traffic-light overlap fix. Overview cards now render flush below the title bar without scrolling
+- **Fix traffic light button overlap** — Prevent the dashboard sidebar from covering macOS window control buttons
 
 ---
 
-### 改进
+### 修复
 
-- **切换到 metacubexd 面板** — 用 MetaCubeX 官方面板替代 Yacd-meta。修复日志页为空和连接面板布局错位的问题。包体更小（3.2 MB vs 6.9 MB）
-- **Dashboard 升级更可靠** — 每次更新 app 都会可靠地替换 dashboard 文件，即使旧文件有权限限制也不会失败
+- **修复面板顶部多余空白** — 消除之前修复交通灯遮挡时引入的内容区顶部多余空白。概览卡片现在紧贴标题栏下方显示，无需滚动
+- **修复交通灯按钮被遮挡** — 防止面板侧边栏覆盖 macOS 窗口控制按钮
