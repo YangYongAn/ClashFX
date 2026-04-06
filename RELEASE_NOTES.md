@@ -1,13 +1,19 @@
-## ClashFX 1.0.6
+## ClashFX 1.0.7
 
-### Bug Fixes
+### New Features
 
-- **Fix dashboard top spacing** — Reduce excess blank space at the top of the content area caused by the previous traffic-light overlap fix. Overview cards now render flush below the title bar without scrolling
-- **Fix traffic light button overlap** — Prevent the dashboard sidebar from covering macOS window control buttons
+- **TUN route exclusion settings** — Exclude specific IPs, CIDRs, and domains from TUN routing. IPs/CIDRs go to `tun.route-exclude-address`, domains go to `dns.fake-ip-filter`. Includes Chinese localization. by @YangYongAn in #9
+
+### Improvements
+
+- **Remove menu bar separator** — Remove the 1px divider between the tray icon and speed numbers for a cleaner menu bar look. by @ayangweb in #8
 
 ---
 
-### 修复
+### 新功能
 
-- **修复面板顶部多余空白** — 消除之前修复交通灯遮挡时引入的内容区顶部多余空白。概览卡片现在紧贴标题栏下方显示，无需滚动
-- **修复交通灯按钮被遮挡** — 防止面板侧边栏覆盖 macOS 窗口控制按钮
+- **TUN 路由排除设置** — 支持将特定 IP、CIDR 和域名排除出 TUN 路由。IP/CIDR 写入 `tun.route-exclude-address`，域名写入 `dns.fake-ip-filter`。包含中文本地化。by @YangYongAn in #9
+
+### 改进
+
+- **移除菜单栏分隔线** — 去掉托盘图标与速度数字之间的 1px 竖线，菜单栏更简洁。by @ayangweb in #8
