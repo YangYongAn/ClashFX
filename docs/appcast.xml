@@ -8,7 +8,7 @@
     <item>
   <title>Version 1.0.8</title>
   <description><![CDATA[
-    <h2>ClashFX v1.0.8</h2><ul><li><strong>Fix remote config import rejecting proxy-provider-only configs</strong> — Configs using only proxy-providers (without inline proxies) were incorrectly rejected with format error. Fixes #12</li></ul>
+    <h2>ClashFX v1.0.8</h2><ul><li><strong>Fix remote config import rejecting proxy-provider-only configs</strong> — Configs using only proxy-providers (without inline proxies) were incorrectly rejected with format error. Fixes #12</li><li><strong>Fix menu bar icon shrinking when speed display is disabled</strong> — The tray icon was rendered too small when real-time speed display was turned off. by @YangYongAn</li></ul>
   ]]></description>
   <pubDate>Wed, 09 Apr 2026 02:24:00 +0000</pubDate>
   <sparkle:version>1.0.8</sparkle:version>
