@@ -380,3 +380,9 @@
 
 /* No comment provided by engineer. */
 "Tray Icon" = "Иконка трея";
+
+/* No comment provided by engineer. */
+"The file could not be loaded as an image." = "Не удалось загрузить файл как изображение.";
+
+/* No comment provided by engineer. */
+"Image is too large (%d×%d). Maximum allowed size is %d×%d pixels." = "Изображение слишком большое (%d×%d). Максимально допустимый размер — %d×%d пикселей.";

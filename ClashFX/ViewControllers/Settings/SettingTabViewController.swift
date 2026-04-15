@@ -26,8 +26,11 @@ class SettingTabViewController: NSTabViewController, NibLoadable {
         let vc = AppearanceSettingViewController()
         let item = NSTabViewItem(viewController: vc)
         item.label = NSLocalizedString("Appearance", comment: "")
-        item.image = NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
-            ?? NSImage(named: NSImage.colorPanelName)
+        if #available(macOS 11.0, *) {
+            item.image = NSImage(systemSymbolName: "paintbrush", accessibilityDescription: nil)
+        } else {
+            item.image = NSImage(named: NSImage.colorPanelName)
+        }
         insertTabViewItem(item, at: 1)
     }
 }

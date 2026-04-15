@@ -8,12 +8,11 @@
 import Cocoa
 
 class TrayIconPickerView: NSView {
+    private let dropZone = NSView()
     private let imageView = NSImageView()
     private let placeholderLabel = NSTextField(labelWithString: "")
     private let selectButton = NSButton()
     private let resetButton = NSButton()
-
-    var onImageChanged: (() -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -30,7 +29,6 @@ class TrayIconPickerView: NSView {
         translatesAutoresizingMaskIntoConstraints = false
 
         // Image preview area (acts as drop zone)
-        let dropZone = NSView()
         dropZone.translatesAutoresizingMaskIntoConstraints = false
         dropZone.wantsLayer = true
         dropZone.layer?.borderWidth = 1.5
@@ -107,16 +105,16 @@ class TrayIconPickerView: NSView {
         ]) as? [URL], !urls.isEmpty else {
             return []
         }
-        subviews.first?.layer?.borderColor = NSColor.controlAccentColor.cgColor
+        dropZone.layer?.borderColor = NSColor.controlAccentColor.cgColor
         return .copy
     }
 
     override func draggingExited(_ sender: NSDraggingInfo?) {
-        subviews.first?.layer?.borderColor = NSColor.separatorColor.cgColor
+        dropZone.layer?.borderColor = NSColor.separatorColor.cgColor
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        subviews.first?.layer?.borderColor = NSColor.separatorColor.cgColor
+        dropZone.layer?.borderColor = NSColor.separatorColor.cgColor
         guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [
             .urlReadingFileURLsOnly: true,
             .urlReadingContentsConformToTypes: ["public.png"],
@@ -148,7 +146,34 @@ class TrayIconPickerView: NSView {
         reloadIcon()
     }
 
+    private static let maxIconDimension: CGFloat = 128
+
     private func applyImage(from srcURL: URL) -> Bool {
+        guard let image = NSImage(contentsOf: srcURL) else {
+            let alert = NSAlert()
+            alert.messageText = NSLocalizedString("Failed to change tray icon", comment: "")
+            alert.informativeText = NSLocalizedString("The file could not be loaded as an image.", comment: "")
+            alert.runModal()
+            return false
+        }
+
+        let pixelSize = image.representations.first.map {
+            NSSize(width: $0.pixelsWide, height: $0.pixelsHigh)
+        } ?? image.size
+
+        if pixelSize.width > TrayIconPickerView.maxIconDimension || pixelSize.height > TrayIconPickerView.maxIconDimension {
+            let alert = NSAlert()
+            alert.alertStyle = .warning
+            alert.messageText = NSLocalizedString("Failed to change tray icon", comment: "")
+            alert.informativeText = String(
+                format: NSLocalizedString("Image is too large (%d×%d). Maximum allowed size is %d×%d pixels.", comment: ""),
+                Int(pixelSize.width), Int(pixelSize.height),
+                Int(TrayIconPickerView.maxIconDimension), Int(TrayIconPickerView.maxIconDimension)
+            )
+            alert.runModal()
+            return false
+        }
+
         let destPath = StatusItemTool.customImagePath
         let destURL = URL(fileURLWithPath: destPath)
         let destDir = destURL.deletingLastPathComponent()
@@ -179,6 +204,5 @@ class TrayIconPickerView: NSView {
         }
 
         updateResetButtonVisibility()
-        onImageChanged?()
     }
 }

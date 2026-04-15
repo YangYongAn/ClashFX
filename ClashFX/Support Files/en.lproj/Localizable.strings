@@ -380,3 +380,9 @@
 
 /* No comment provided by engineer. */
 "Tray Icon" = "Tray Icon";
+
+/* No comment provided by engineer. */
+"The file could not be loaded as an image." = "The file could not be loaded as an image.";
+
+/* No comment provided by engineer. */
+"Image is too large (%d×%d). Maximum allowed size is %d×%d pixels." = "Image is too large (%d×%d). Maximum allowed size is %d×%d pixels.";

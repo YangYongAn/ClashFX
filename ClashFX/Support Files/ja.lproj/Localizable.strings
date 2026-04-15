@@ -380,3 +380,9 @@
 
 /* No comment provided by engineer. */
 "Tray Icon" = "トレイアイコン";
+
+/* No comment provided by engineer. */
+"The file could not be loaded as an image." = "ファイルを画像として読み込めませんでした。";
+
+/* No comment provided by engineer. */
+"Image is too large (%d×%d). Maximum allowed size is %d×%d pixels." = "画像が大きすぎます（%d×%d）。最大許容サイズは %d×%d ピクセルです。";
