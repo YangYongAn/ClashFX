@@ -360,3 +360,30 @@
 
 /* No comment provided by engineer. */
 "Later" = "Later";
+/* No comment provided by engineer. */
+"Select Tray Icon Image" = "Select Tray Icon Image";
+
+/* No comment provided by engineer. */
+"Failed to change tray icon" = "Failed to change tray icon";
+"Failed to reset tray icon" = "Failed to reset tray icon";
+
+/* No comment provided by engineer. */
+"Drop PNG here" = "Drop PNG here";
+
+/* No comment provided by engineer. */
+"Select Image" = "Select Image";
+
+/* No comment provided by engineer. */
+"Reset" = "Reset";
+
+/* No comment provided by engineer. */
+"Appearance" = "Appearance";
+
+/* No comment provided by engineer. */
+"Tray Icon" = "Tray Icon";
+
+/* No comment provided by engineer. */
+"The file could not be loaded as an image." = "The file could not be loaded as an image.";
+
+/* No comment provided by engineer. */
+"Image is too large (%d×%d). Maximum allowed size is %d×%d pixels. Recommended size is 36×36 pixels (72×72 for Retina @2x)." = "Image is too large (%d×%d). Maximum allowed size is %d×%d pixels. Recommended size is 36×36 pixels (72×72 for Retina @2x).";

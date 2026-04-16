@@ -360,3 +360,30 @@
 
 /* No comment provided by engineer. */
 "Later" = "稍後";
+/* No comment provided by engineer. */
+"Select Tray Icon Image" = "選擇選單列圖像";
+
+/* No comment provided by engineer. */
+"Failed to change tray icon" = "更換選單列圖像失敗";
+"Failed to reset tray icon" = "重置選單列圖像失敗";
+
+/* No comment provided by engineer. */
+"Drop PNG here" = "拖入 PNG 圖片";
+
+/* No comment provided by engineer. */
+"Select Image" = "選擇圖片";
+
+/* No comment provided by engineer. */
+"Reset" = "重置";
+
+/* No comment provided by engineer. */
+"Appearance" = "外觀";
+
+/* No comment provided by engineer. */
+"Tray Icon" = "選單列圖像";
+
+/* No comment provided by engineer. */
+"The file could not be loaded as an image." = "無法將該檔案載入為圖片。";
+
+/* No comment provided by engineer. */
+"Image is too large (%d×%d). Maximum allowed size is %d×%d pixels. Recommended size is 36×36 pixels (72×72 for Retina @2x)." = "圖片尺寸過大（%d×%d）。最大允許尺寸為 %d×%d 像素。推薦尺寸為 36×36 像素（Retina @2x 為 72×72）。";
