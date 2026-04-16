@@ -11,6 +11,7 @@
 ### Bug Fixes
 
 - **Fix language switch dialog not reappearing after clicking "Later"** — When switching language and dismissing the restart prompt with "Later", clicking the same language again would no longer show the dialog. Language settings are now only persisted when the user confirms the restart. Fixes #15
+- **Fix proxy selections lost after app restart** — Saved proxy group selections (e.g. which node was chosen for each proxy group) could be permanently deleted if the API call failed during startup (e.g. core not ready yet). The records are now preserved for retry on next reload.
 
 ---
 
@@ -25,6 +26,7 @@
 ### Bug 修复
 
 - **修复点击「稍后」后语言切换弹窗不再出现的问题** — 切换语言时点击「稍后」关闭重启提示后，再次点击相同语言不会弹出对话框。现已修复：仅在用户确认重启时才保存语言设置。修复 #15
+- **修复重启后代理选择丢失的问题** — 启动时如果内核尚未就绪，API 调用失败会导致保存的代理组选择（如每个代理组选中的节点）被永久删除。现已修复：失败时保留记录，下次重载时重试。
 
 ---
 
