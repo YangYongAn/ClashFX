@@ -249,10 +249,30 @@ jobs:
         DATE=$(date -u +%Y-%m-%d)
         NOTES=$(head -50 RELEASE_NOTES.md | jq -Rs .)
 
+        CHANGE_TYPE="fix"
+        DESC_EN=""
+        DESC_ZH=""
+        if [ -f RELEASE_NOTES.md ]; then
+          if grep -q "New Features" RELEASE_NOTES.md; then
+            CHANGE_TYPE="feat"
+          fi
+          DESC_EN=$(sed -n 's/^- \*\*.*\*\* — \(.*\)$/\1/p' RELEASE_NOTES.md | head -1)
+          DESC_ZH=$(awk '
+            /^### 改进|^### 新功能/ { in_zh = 1; next }
+            /^---/ && in_zh { exit }
+            in_zh && /^- \*\*/ { print; exit }
+          ' RELEASE_NOTES.md | sed 's/^- \*\*.*\*\* — \(.*\)$/\1/')
+        fi
+        DESC_EN=${DESC_EN:-"See release notes on GitHub"}
+        DESC_ZH=${DESC_ZH:-"详见 GitHub Release Notes"}
+
         PAYLOAD=$(jq -n \
           --arg version "$tag" \
           --arg date "$DATE" \
           --arg product "clashfx" \
+          --arg change_type "$CHANGE_TYPE" \
+          --arg desc_en "$DESC_EN" \
+          --arg desc_zh "$DESC_ZH" \
           --argjson notes "$NOTES" \
           '{
             event_type: "clashfx-release",
@@ -260,6 +280,9 @@ jobs:
               product: $product,
               version: $version,
               date: $date,
+              change_type: $change_type,
+              desc_en: $desc_en,
+              desc_zh: $desc_zh,
               release_notes: $notes,
               download_url: "https://github.com/Clash-FX/ClashFX/releases/download/\($version)/ClashFX.dmg"
             }
