@@ -34,7 +34,7 @@ class TrayMenuSettingView: NSView {
 
     // MARK: - State
 
-    private var switchHandlers: [NSControl: () -> Void] = [:]
+    private var switchHandlers: [NSControl: (Bool) -> Void] = [:]
     private var parentControlToChildren: [NSControl: [ChildView]] = [:]
     private var uiSetupDone = false
 
@@ -153,7 +153,7 @@ class TrayMenuSettingView: NSView {
         let stack = NSStackView()
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.orientation = .vertical
-        stack.alignment = .fill
+        stack.alignment = .leading
         stack.spacing = 0
         stack.edgeInsets = NSEdgeInsets(top: 4, left: 4, bottom: 4, right: 4)
 
@@ -173,9 +173,8 @@ class TrayMenuSettingView: NSView {
             switch entry {
             case .single(let row):
                 let (rowView, control, _) = makeRow(title: row.title, isOn: row.getter())
-                switchHandlers[control] = { [weak control, row] in
-                    guard let c = control else { return }
-                    row.setter(c.state == .on)
+                switchHandlers[control] = { [row] isOn in
+                    row.setter(isOn)
                     NotificationCenter.default.post(name: .trayMenuSettingsChanged, object: nil)
                 }
                 stack.addArrangedSubview(rowView)
@@ -194,9 +193,8 @@ class TrayMenuSettingView: NSView {
                         title: child.title, isOn: child.getter(),
                         indent: 16, parentOn: parentIsOn
                     )
-                    switchHandlers[childControl] = { [weak childControl, child] in
-                        guard let c = childControl else { return }
-                        child.setter(c.state == .on)
+                    switchHandlers[childControl] = { [child] isOn in
+                        child.setter(isOn)
                         NotificationCenter.default.post(name: .trayMenuSettingsChanged, object: nil)
                     }
                     childViews.append(ChildView(label: childLabel, control: childControl))
@@ -204,9 +202,7 @@ class TrayMenuSettingView: NSView {
                 }
 
                 parentControlToChildren[parentControl] = childViews
-                switchHandlers[parentControl] = { [weak parentControl, group, childViews] in
-                    guard let c = parentControl else { return }
-                    let isOn = c.state == .on
+                switchHandlers[parentControl] = { [group, childViews] isOn in
                     group.setter(isOn)
                     for child in childViews {
                         child.control.isEnabled = isOn
@@ -282,7 +278,16 @@ class TrayMenuSettingView: NSView {
     // MARK: - Actions
 
     @objc private func onToggle(_ sender: NSControl) {
-        switchHandlers[sender]?()
+        let isOn: Bool
+        if #available(macOS 10.15, *), let sw = sender as? NSSwitch {
+            isOn = sw.state == .on
+        } else if let btn = sender as? NSButton {
+            isOn = btn.state == .on
+        } else {
+            assertionFailure("Unexpected control type in onToggle: \(type(of: sender))")
+            isOn = false
+        }
+        switchHandlers[sender]?(isOn)
     }
 }
 

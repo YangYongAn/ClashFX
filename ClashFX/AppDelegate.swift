@@ -450,7 +450,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func updateProxyList(withMenus menus: [NSMenuItem]) {
         guard !menus.isEmpty else { return }
         let startIndex = statusMenu.items.firstIndex(of: separatorLineTop)! + 1
-        let endIndex = statusMenu.items.firstIndex(of: sepatatorLineEndProxySelect)!
         sepatatorLineEndProxySelect.isHidden = false
         for each in menus {
             statusMenu.insertItem(each, at: startIndex)
