@@ -480,3 +480,6 @@
 
 /* No comment provided by engineer. */
 "Allow from LAN" = "允許區域網路連線";
+
+/* No comment provided by engineer. */
+"Config Switcher" = "配置切換";

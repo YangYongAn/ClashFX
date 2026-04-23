@@ -473,6 +473,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             for item in items.reversed() {
                 menu.insertItem(item, at: 0)
             }
+            // Apply config-switcher visibility to newly inserted items
+            self.applyConfigSwitcherVisibility(
+                showConfigSwitcher: Settings.trayMenuShowConfigs && Settings.trayMenuShowConfigSwitcher
+            )
         }
     }
 
@@ -1450,6 +1454,16 @@ extension AppDelegate {
         applyTrayMenuVisibility()
     }
 
+    /// Hides or shows dynamic config-switch items and the separator that follows them.
+    private func applyConfigSwitcherVisibility(showConfigSwitcher: Bool) {
+        guard let menu = configSeparatorLine.menu,
+              let lineIndex = menu.items.firstIndex(of: configSeparatorLine) else { return }
+        for i in 0 ..< lineIndex {
+            menu.items[i].isHidden = !showConfigSwitcher
+        }
+        configSeparatorLine.isHidden = !showConfigSwitcher || lineIndex == 0
+    }
+
     func applyTrayMenuVisibility() {
         // Proxy Mode (single item)
         proxyModeMenuItem.isHidden = !Settings.trayMenuShowProxyMode
@@ -1504,6 +1518,9 @@ extension AppDelegate {
         updateExternalResourceMenuItem.isHidden = !(showConfigs && Settings.trayMenuShowUpdateExternal)
         remoteConfigMenuItem.isHidden = !(showConfigs && Settings.trayMenuShowRemoteConfig)
         remoteControllerMenuItem.isHidden = !(showConfigs && Settings.trayMenuShowRemoteController)
+
+        // Dynamic config switch items (at top of Configs submenu, before configSeparatorLine)
+        applyConfigSwitcherVisibility(showConfigSwitcher: showConfigs && Settings.trayMenuShowConfigSwitcher)
 
         // Language (single item, added dynamically)
         langMenuItem?.isHidden = !Settings.trayMenuShowLanguage

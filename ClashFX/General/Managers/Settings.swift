@@ -145,6 +145,9 @@ enum Settings {
     @UserDefault("trayMenuShowConfigs", defaultValue: true)
     static var trayMenuShowConfigs: Bool
 
+    @UserDefault("trayMenuShowConfigSwitcher", defaultValue: true)
+    static var trayMenuShowConfigSwitcher: Bool
+
     @UserDefault("trayMenuShowConfigEditor", defaultValue: true)
     static var trayMenuShowConfigEditor: Bool
 

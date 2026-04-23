@@ -414,3 +414,72 @@
 
 /* No comment provided by engineer. */
 "Drag and drop an image to customize the app icon.\nRecommended: 512x512 px (1024x1024 for @2x), PNG or ICNS format." = "画像をドラッグ＆ドロップしてアプリアイコンをカスタマイズ。\n推奨：512×512 px（@2x は 1024×1024）、PNG または ICNS 形式。";
+
+/* Tray Menu Settings */
+"Tray Menu" = "トレイメニュー";
+
+/* No comment provided by engineer. */
+"Node Switch" = "ノード切替";
+
+/* No comment provided by engineer. */
+"Proxy Actions" = "プロキシ操作";
+
+/* No comment provided by engineer. */
+"General Settings" = "一般設定";
+
+/* No comment provided by engineer. */
+"Tools" = "ツール";
+
+/* No comment provided by engineer. */
+"Start at Login" = "ログイン時に起動";
+
+/* No comment provided by engineer. */
+"Dashboard" = "ダッシュボード";
+
+/* No comment provided by engineer. */
+"Connection Details" = "接続の詳細";
+
+/* No comment provided by engineer. */
+"Configs" = "設定";
+
+/* No comment provided by engineer. */
+"Open Config Folder" = "設定フォルダを開く";
+
+/* No comment provided by engineer. */
+"Reload Config" = "設定を再読み込み";
+
+/* No comment provided by engineer. */
+"Update External Resources" = "外部リソースを更新";
+
+/* No comment provided by engineer. */
+"Remote Config" = "リモート設定";
+
+/* No comment provided by engineer. */
+"Remote Controller" = "リモートコントローラー";
+
+/* No comment provided by engineer. */
+"Config Switcher" = "設定切替";
+
+/* No comment provided by engineer. */
+"Help" = "ヘルプ";
+
+/* No comment provided by engineer. */
+"About" = "このアプリについて";
+
+/* No comment provided by engineer. */
+"Check for Update" = "アップデートを確認";
+
+/* No comment provided by engineer. */
+"Log Level" = "ログレベル";
+
+/* No comment provided by engineer. */
+"Show Log" = "ログを表示";
+
+/* No comment provided by engineer. */
+"Ports" = "ポート";
+
+/* No comment provided by engineer. */
+"Show Net Speed" = "ネット速度を表示";
+
+/* No comment provided by engineer. */
+"Allow from LAN" = "LAN からの接続を許可";

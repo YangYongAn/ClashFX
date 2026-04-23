@@ -414,3 +414,72 @@
 
 /* No comment provided by engineer. */
 "Drag and drop an image to customize the app icon.\nRecommended: 512x512 px (1024x1024 for @2x), PNG or ICNS format." = "Перетащите изображение для настройки иконки приложения.\nРекомендуется: 512×512 пикс. (@2x — 1024×1024), формат PNG или ICNS.";
+
+/* Tray Menu Settings */
+"Tray Menu" = "Меню трея";
+
+/* No comment provided by engineer. */
+"Node Switch" = "Переключение узла";
+
+/* No comment provided by engineer. */
+"Proxy Actions" = "Действия прокси";
+
+/* No comment provided by engineer. */
+"General Settings" = "Основные настройки";
+
+/* No comment provided by engineer. */
+"Tools" = "Инструменты";
+
+/* No comment provided by engineer. */
+"Start at Login" = "Запускать при входе";
+
+/* No comment provided by engineer. */
+"Dashboard" = "Панель управления";
+
+/* No comment provided by engineer. */
+"Connection Details" = "Сведения о соединении";
+
+/* No comment provided by engineer. */
+"Configs" = "Конфигурации";
+
+/* No comment provided by engineer. */
+"Open Config Folder" = "Открыть папку конфигурации";
+
+/* No comment provided by engineer. */
+"Reload Config" = "Перезагрузить конфигурацию";
+
+/* No comment provided by engineer. */
+"Update External Resources" = "Обновить внешние ресурсы";
+
+/* No comment provided by engineer. */
+"Remote Config" = "Удалённая конфигурация";
+
+/* No comment provided by engineer. */
+"Remote Controller" = "Удалённый контроллер";
+
+/* No comment provided by engineer. */
+"Config Switcher" = "Переключатель конфигураций";
+
+/* No comment provided by engineer. */
+"Help" = "Справка";
+
+/* No comment provided by engineer. */
+"About" = "О программе";
+
+/* No comment provided by engineer. */
+"Check for Update" = "Проверить наличие обновлений";
+
+/* No comment provided by engineer. */
+"Log Level" = "Уровень журнала";
+
+/* No comment provided by engineer. */
+"Show Log" = "Показать журнал";
+
+/* No comment provided by engineer. */
+"Ports" = "Порты";
+
+/* No comment provided by engineer. */
+"Show Net Speed" = "Показать скорость сети";
+
+/* No comment provided by engineer. */
+"Allow from LAN" = "Разрешить из локальной сети";

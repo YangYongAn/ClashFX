@@ -99,6 +99,7 @@ class TrayMenuSettingView: NSView {
                 getter: { Settings.trayMenuShowConfigs },
                 setter: { Settings.trayMenuShowConfigs = $0 },
                 children: [
+                    ItemRow(title: NSLocalizedString("Config Switcher", comment: ""), getter: { Settings.trayMenuShowConfigSwitcher }, setter: { Settings.trayMenuShowConfigSwitcher = $0 }),
                     ItemRow(title: NSLocalizedString("Config Editor", comment: ""), getter: { Settings.trayMenuShowConfigEditor }, setter: { Settings.trayMenuShowConfigEditor = $0 }),
                     ItemRow(title: NSLocalizedString("Open Config Folder", comment: ""), getter: { Settings.trayMenuShowOpenConfigFolder }, setter: { Settings.trayMenuShowOpenConfigFolder = $0 }),
                     ItemRow(title: NSLocalizedString("Reload Config", comment: ""), getter: { Settings.trayMenuShowReloadConfig }, setter: { Settings.trayMenuShowReloadConfig = $0 }),

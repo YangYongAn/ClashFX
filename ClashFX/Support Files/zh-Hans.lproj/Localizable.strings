@@ -517,3 +517,6 @@
 
 /* No comment provided by engineer. */
 "Allow from LAN" = "允许局域网连接";
+
+/* No comment provided by engineer. */
+"Config Switcher" = "配置切换";
