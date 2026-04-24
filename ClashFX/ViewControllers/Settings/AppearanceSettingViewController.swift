@@ -108,4 +108,3 @@ class AppearanceSettingViewController: NSViewController {
         }
     }
 }
-

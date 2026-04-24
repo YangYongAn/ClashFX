@@ -483,3 +483,6 @@
 
 /* No comment provided by engineer. */
 "Config Switcher" = "Config Switcher";
+
+/* Tray Menu Settings hint */
+"Show or hide items in the tray menu." = "Show or hide items in the tray menu.";

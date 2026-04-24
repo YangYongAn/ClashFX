@@ -102,7 +102,7 @@ enum Settings {
     @UserDefault("trayMenuShowNodeSwitch", defaultValue: true)
     static var trayMenuShowNodeSwitch: Bool
 
-    // Proxy Actions group
+    /// Proxy Actions group
     @UserDefault("trayMenuShowProxyActions", defaultValue: true)
     static var trayMenuShowProxyActions: Bool
 
@@ -115,7 +115,7 @@ enum Settings {
     @UserDefault("trayMenuShowCopyShellCmd", defaultValue: true)
     static var trayMenuShowCopyShellCmd: Bool
 
-    // General Settings group
+    /// General Settings group
     @UserDefault("trayMenuShowGeneralSettings", defaultValue: true)
     static var trayMenuShowGeneralSettings: Bool
 
@@ -128,7 +128,7 @@ enum Settings {
     @UserDefault("trayMenuShowAllowLan", defaultValue: true)
     static var trayMenuShowAllowLan: Bool
 
-    // Tools group
+    /// Tools group
     @UserDefault("trayMenuShowTools", defaultValue: true)
     static var trayMenuShowTools: Bool
 
@@ -141,7 +141,7 @@ enum Settings {
     @UserDefault("trayMenuShowConnections", defaultValue: true)
     static var trayMenuShowConnections: Bool
 
-    // Configs group
+    /// Configs group
     @UserDefault("trayMenuShowConfigs", defaultValue: true)
     static var trayMenuShowConfigs: Bool
 
@@ -166,11 +166,11 @@ enum Settings {
     @UserDefault("trayMenuShowRemoteController", defaultValue: true)
     static var trayMenuShowRemoteController: Bool
 
-    // Language (single toggle)
+    /// Language (single toggle)
     @UserDefault("trayMenuShowLanguage", defaultValue: true)
     static var trayMenuShowLanguage: Bool
 
-    // Help group
+    /// Help group
     @UserDefault("trayMenuShowHelp", defaultValue: true)
     static var trayMenuShowHelp: Bool
 

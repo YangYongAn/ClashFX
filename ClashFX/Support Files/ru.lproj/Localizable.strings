@@ -483,3 +483,6 @@
 
 /* No comment provided by engineer. */
 "Allow from LAN" = "Разрешить из локальной сети";
+
+/* Tray Menu Settings hint */
+"Show or hide items in the tray menu." = "Выберите элементы для отображения в меню трея";

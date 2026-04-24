@@ -483,3 +483,6 @@
 
 /* No comment provided by engineer. */
 "Allow from LAN" = "LAN からの接続を許可";
+
+/* Tray Menu Settings hint */
+"Show or hide items in the tray menu." = "トレイメニューに表示する項目を選択";

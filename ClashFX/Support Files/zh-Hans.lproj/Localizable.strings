@@ -520,3 +520,6 @@
 
 /* No comment provided by engineer. */
 "Config Switcher" = "配置切换";
+
+/* Tray Menu Settings hint */
+"Show or hide items in the tray menu." = "选择托盘菜单中各项目的显示与隐藏";

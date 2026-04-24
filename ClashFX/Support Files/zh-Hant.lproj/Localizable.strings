@@ -483,3 +483,6 @@
 
 /* No comment provided by engineer. */
 "Config Switcher" = "配置切換";
+
+/* Tray Menu Settings hint */
+"Show or hide items in the tray menu." = "選擇托盤選單中各項目的顯示與隱藏";
