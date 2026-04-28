@@ -41,4 +41,17 @@ typedef void(^dictReplyBlock)(NSDictionary *);
                                 reply:(stringReplyBlock)reply;
 
 - (void)stopMihomoCoreWithReply:(stringReplyBlock)reply;
+
+// DNS override for TUN mode
+- (void)overrideDNSWithServers:(NSArray<NSString *> *)servers
+               filterInterface:(BOOL)filterInterface
+                         reply:(stringReplyBlock)reply;
+
+- (void)restoreDNSWithSavedInfo:(NSDictionary *)savedInfo
+                filterInterface:(BOOL)filterInterface
+                          reply:(stringReplyBlock)reply;
+
+- (void)getCurrentDNSSetting:(dictReplyBlock)reply;
+
+- (void)flushDNSCacheWithReply:(stringReplyBlock)reply;
 @end

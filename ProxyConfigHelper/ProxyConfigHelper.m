@@ -204,4 +204,51 @@ ProxyConfigRemoteProcessProtocol
     }
 }
 
+// MARK: - DNS
+
+- (void)overrideDNSWithServers:(NSArray<NSString *> *)servers
+               filterInterface:(BOOL)filterInterface
+                         reply:(stringReplyBlock)reply {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ProxySettingTool *tool = [ProxySettingTool new];
+        [tool overrideDNSWithServers:servers filterInterface:filterInterface];
+        reply(nil);
+    });
+}
+
+- (void)restoreDNSWithSavedInfo:(NSDictionary *)savedInfo
+                filterInterface:(BOOL)filterInterface
+                          reply:(stringReplyBlock)reply {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        ProxySettingTool *tool = [ProxySettingTool new];
+        [tool restoreDNS:savedInfo filterInterface:filterInterface];
+        reply(nil);
+    });
+}
+
+- (void)getCurrentDNSSetting:(dictReplyBlock)reply {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSDictionary *info = [ProxySettingTool currentDNSSettings];
+        reply(info);
+    });
+}
+
+- (void)flushDNSCacheWithReply:(stringReplyBlock)reply {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSTask *flush = [[NSTask alloc] init];
+        flush.executableURL = [NSURL fileURLWithPath:@"/usr/bin/dscacheutil"];
+        flush.arguments = @[@"-flushcache"];
+        [flush launchAndReturnError:nil];
+        [flush waitUntilExit];
+
+        NSTask *hup = [[NSTask alloc] init];
+        hup.executableURL = [NSURL fileURLWithPath:@"/usr/bin/killall"];
+        hup.arguments = @[@"-HUP", @"mDNSResponder"];
+        [hup launchAndReturnError:nil];
+        [hup waitUntilExit];
+
+        reply(nil);
+    });
+}
+
 @end

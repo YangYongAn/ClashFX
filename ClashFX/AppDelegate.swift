@@ -82,6 +82,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastStreamResetTime: Date = .distantPast
     private var pendingStreamResetWork: DispatchWorkItem?
 
+    private var savedDNSInfo: [String: Any] {
+        get { UserDefaults.standard.dictionary(forKey: "kSavedDNSInfo") ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: "kSavedDNSInfo") }
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         Logger.log("applicationWillFinishLaunching")
         signal(SIGPIPE, SIG_IGN)
@@ -218,6 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         UserDefaults.standard.set(0, forKey: "launch_fail_times")
         Logger.log("ClashFX will terminate")
         if ConfigManager.shared.isEnhancedModeActive {
+            restoreDNSAfterTun()
             PrivilegedHelperManager.shared.helper()?.stopMihomoCore { _ in }
         }
         if NetworkChangeNotifier.isCurrentSystemSetToClash(looser: true) ||
@@ -815,6 +821,7 @@ extension AppDelegate {
                                 if success {
                                     clashResumeCallbacks()
                                     self?.verifyTunStatus(port: port, secret: secret)
+                                    self?.overrideDNSForTun()
                                     completion(nil)
                                 } else {
                                     Logger.log("External core failed to start, rolling back", level: .error)
@@ -862,6 +869,7 @@ extension AppDelegate {
     }
 
     private func disableEnhancedMode(completion: @escaping (String?) -> Void) {
+        restoreDNSAfterTun()
         PrivilegedHelperManager.shared.helper()?.stopMihomoCore { [weak self] _ in
             DispatchQueue.main.async {
                 clashPauseCallbacks()
@@ -958,6 +966,33 @@ extension AppDelegate {
             let stack = tun["stack"] as? String ?? "unknown"
             Logger.log("API TUN status: enable=\(tunEnabled), device=\(device), stack=\(stack)")
         }.resume()
+    }
+
+    private func overrideDNSForTun() {
+        guard let helper = PrivilegedHelperManager.shared.helper() else { return }
+        helper.getCurrentDNSSetting { [weak self] info in
+            if let dns = info as? [String: Any], !dns.isEmpty {
+                self?.savedDNSInfo = dns
+            }
+            helper.overrideDNS(withServers: ["198.18.0.2"],
+                               filterInterface: Settings.filterInterface) { _ in
+                helper.flushDNSCache { _ in
+                    Logger.log("TUN DNS override: system DNS → 198.18.0.2")
+                }
+            }
+        }
+    }
+
+    private func restoreDNSAfterTun() {
+        guard let helper = PrivilegedHelperManager.shared.helper() else { return }
+        let saved = savedDNSInfo
+        helper.restoreDNS(withSavedInfo: saved,
+                          filterInterface: Settings.filterInterface) { [weak self] _ in
+            self?.savedDNSInfo = [:]
+            helper.flushDNSCache { _ in
+                Logger.log("TUN DNS restored")
+            }
+        }
     }
 
     private func restoreEnhancedModeIfNeeded() {

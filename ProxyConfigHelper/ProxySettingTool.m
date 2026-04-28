@@ -249,5 +249,58 @@
     }
 }
 
+// MARK: - DNS
+
+- (NSString *)dnsSettingPathWithInterface:(NSString *)interfaceKey {
+    return [NSString stringWithFormat:@"/%@/%@/%@",
+            (NSString *)kSCPrefNetworkServices,
+            interfaceKey,
+            (NSString *)kSCEntNetDNS];
+}
+
+- (void)overrideDNSWithServers:(NSArray<NSString *> *)servers
+               filterInterface:(BOOL)filterInterface {
+    [self applySCNetworkSettingWithRef:^(SCPreferencesRef ref) {
+        [ProxySettingTool getDiviceListWithPrefRef:ref filterInterface:filterInterface devices:^(NSString *key, NSDictionary *dict) {
+            NSString *path = [self dnsSettingPathWithInterface:key];
+            NSDictionary *dnsSettings = @{
+                (__bridge NSString *)kSCPropNetDNSServerAddresses: servers
+            };
+            SCPreferencesPathSetValue(ref,
+                                      (__bridge CFStringRef)path,
+                                      (__bridge CFDictionaryRef)dnsSettings);
+        }];
+    }];
+}
+
+- (void)restoreDNS:(NSDictionary *)savedInfo
+    filterInterface:(BOOL)filterInterface {
+    [self applySCNetworkSettingWithRef:^(SCPreferencesRef ref) {
+        [ProxySettingTool getDiviceListWithPrefRef:ref filterInterface:filterInterface devices:^(NSString *key, NSDictionary *dict) {
+            NSString *path = [self dnsSettingPathWithInterface:key];
+            NSDictionary *dnsSettings = savedInfo[key];
+            if ([dnsSettings isKindOfClass:[NSDictionary class]]) {
+                SCPreferencesPathSetValue(ref,
+                                          (__bridge CFStringRef)path,
+                                          (__bridge CFDictionaryRef)dnsSettings);
+            } else {
+                SCPreferencesPathRemoveValue(ref, (__bridge CFStringRef)path);
+            }
+        }];
+    }];
+}
+
++ (NSMutableDictionary<NSString *,NSDictionary *> *)currentDNSSettings {
+    __block NSMutableDictionary<NSString *,NSDictionary *> *info = [NSMutableDictionary dictionary];
+    SCPreferencesRef ref = SCPreferencesCreate(nil, CFSTR("ClashFX"), nil);
+    [ProxySettingTool getDiviceListWithPrefRef:ref filterInterface:YES devices:^(NSString *key, NSDictionary *dev) {
+        NSDictionary *dnsSettings = dev[(__bridge NSString *)kSCEntNetDNS];
+        if (dnsSettings) {
+            info[key] = [dnsSettings copy];
+        }
+    }];
+    CFRelease(ref);
+    return info;
+}
 
 @end
