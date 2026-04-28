@@ -745,13 +745,9 @@ extension AppDelegate {
                     .post(title: NSLocalizedString("Enhanced Mode", comment: ""),
                           info: NSLocalizedString(info, comment: ""))
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.syncConfig()
-                self.resetStreamApi()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    MenuItemFactory.recreateProxyMenuItems()
-                }
-            }
+            self.syncConfig()
+            self.resetStreamApi()
+            MenuItemFactory.refreshExistingMenuItems()
         }
 
         if newState {
@@ -1007,18 +1003,14 @@ extension AppDelegate {
                     self?.enhancedModeMenuItem.state = .off
                     Logger.log("Failed to restore Enhanced Mode: \(error)", level: .error)
                     self?.syncConfig()
-                    MenuItemFactory.recreateProxyMenuItems()
                     self?.resetStreamApi()
+                    MenuItemFactory.refreshExistingMenuItems()
                 } else {
                     self?.enhancedModeMenuItem.state = .on
                     Logger.log("Enhanced Mode restored successfully")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        self?.syncConfig()
-                        self?.resetStreamApi()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            MenuItemFactory.recreateProxyMenuItems()
-                        }
-                    }
+                    self?.syncConfig()
+                    self?.resetStreamApi()
+                    MenuItemFactory.refreshExistingMenuItems()
                 }
             }
         }

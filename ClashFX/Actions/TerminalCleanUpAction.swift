@@ -47,7 +47,7 @@ enum TerminalConfirmAction {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
             case .timedOut:
@@ -55,7 +55,7 @@ enum TerminalConfirmAction {
                 DispatchQueue.main.async {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     NSApp.reply(toApplicationShouldTerminate: true)
                 }
             }

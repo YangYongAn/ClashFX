@@ -21,7 +21,7 @@ class MenuItemFactory {
         ApiRequest.getMergedProxyData {
             info in
             if info?.proxiesMap.keys != cachedProxyData?.proxiesMap.keys {
-                // force update menu
+                cachedProxyData = info
                 refreshMenuItems(mergedData: info)
                 return
             }
