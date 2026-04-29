@@ -10,7 +10,7 @@ import Alamofire
 import Cocoa
 
 class RemoteConfigManager {
-    private static let generatedShareLinkTemplateVersion = 5
+    private static let generatedShareLinkTemplateVersion = 6
     private static let generatedShareLinkMarker = "clashfx-generated: share-links"
     private static let generatedShareLinkMigrationKey = "kGeneratedShareLinkRemoteConfigMigrationVersion"
     private static let defaultGeoIPDataURL = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
@@ -318,7 +318,7 @@ class RemoteConfigManager {
           - IP-CIDR6,fe80::/10,DIRECT,no-resolve
           - GEOIP,private,DIRECT
           - GEOIP,CN,DIRECT
-          - MATCH,Auto
+          - MATCH,Proxy
         """
     }
 
