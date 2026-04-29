@@ -11,20 +11,22 @@ import Cocoa
 class RemoteConfigModel: Codable {
     var url: String
     var name: String
+    var userAgent: String?
     var updateTime: Date?
     var updating = false
     var isPlaceHolderName = false
     var generatedByShareLinks = false
     var generatedTemplateVersion: Int?
 
-    init(url: String, name: String, updateTime: Date? = nil) {
+    init(url: String, name: String, userAgent: String? = nil, updateTime: Date? = nil) {
         self.url = url
         self.name = name
+        self.userAgent = userAgent
         self.updateTime = updateTime
     }
 
     private enum CodingKeys: String, CodingKey {
-        case url, name, updateTime, generatedByShareLinks, generatedTemplateVersion
+        case url, name, userAgent, updateTime, generatedByShareLinks, generatedTemplateVersion
     }
 
     func displayingTimeString() -> String {

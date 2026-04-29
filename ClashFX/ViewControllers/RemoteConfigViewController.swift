@@ -85,6 +85,7 @@ extension RemoteConfigViewController {
     func showAdd(defaultUrl: String? = nil,
                  defaultName: String? = nil,
                  name: String? = nil,
+                 userAgent: String? = nil,
                  allowAlt: Bool = false) {
         let alertView = NSAlert()
         alertView.addButton(withTitle: NSLocalizedString("OK", comment: ""))
@@ -94,6 +95,7 @@ extension RemoteConfigViewController {
         if let defaultUrl = defaultUrl {
             remoteConfigInputView.setUrl(string: defaultUrl, name: name, defaultName: defaultName)
         }
+        remoteConfigInputView.setUserAgent(userAgent)
         alertView.accessoryView = remoteConfigInputView
         let response = alertView.runModal()
 
@@ -109,6 +111,7 @@ extension RemoteConfigViewController {
         let configName = remoteConfigInputView.getConfigName().0
         let isPlaceHolderName = remoteConfigInputView.getConfigName().1
         let configUrl = remoteConfigInputView.getUrlString()
+        let userAgent = remoteConfigInputView.getUserAgent()
 
         if let existed = RemoteConfigManager.shared.configs.first(where: { $0.name == configName }) {
             guard allowAlt else {
@@ -116,11 +119,13 @@ extension RemoteConfigViewController {
                 return
             }
             existed.url = configUrl
+            existed.userAgent = userAgent
             latestAddedConfig = existed
             requestUpdate(config: existed)
         } else {
             let remoteConfig = RemoteConfigModel(url: configUrl,
                                                  name: configName,
+                                                 userAgent: userAgent,
                                                  updateTime: nil)
             remoteConfig.isPlaceHolderName = !isPlaceHolderName
             RemoteConfigManager.shared.configs.append(remoteConfig)
@@ -168,9 +173,9 @@ extension RemoteConfigViewController: NSTableViewDelegate {
         let row = tableView.clickedRow
         guard let config = RemoteConfigManager.shared.configs[safe: row] else { return }
         if config.isPlaceHolderName {
-            showAdd(defaultUrl: config.url, defaultName: config.name, name: nil, allowAlt: true)
+            showAdd(defaultUrl: config.url, defaultName: config.name, name: nil, userAgent: config.userAgent, allowAlt: true)
         } else {
-            showAdd(defaultUrl: config.url, defaultName: nil, name: config.name, allowAlt: true)
+            showAdd(defaultUrl: config.url, defaultName: nil, name: config.name, userAgent: config.userAgent, allowAlt: true)
         }
     }
 }
@@ -210,9 +215,19 @@ extension RemoteConfigViewController: NSTableViewDataSource {
 class RemoteConfigAddView: NSView, NibLoadable {
     @IBOutlet private var urlTextField: NSTextField!
     @IBOutlet private var configNameTextField: NSTextField!
+    @IBOutlet private var userAgentTextField: NSTextField!
 
     func getUrlString() -> String {
         return urlTextField.stringValue
+    }
+
+    func getUserAgent() -> String? {
+        let value = userAgentTextField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+
+    func setUserAgent(_ userAgent: String?) {
+        userAgentTextField.stringValue = userAgent ?? ""
     }
 
     /// Get the config name

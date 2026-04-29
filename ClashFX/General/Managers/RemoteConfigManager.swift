@@ -10,7 +10,7 @@ import Alamofire
 import Cocoa
 
 class RemoteConfigManager {
-    private static let generatedShareLinkTemplateVersion = 4
+    private static let generatedShareLinkTemplateVersion = 5
     private static let generatedShareLinkMarker = "clashfx-generated: share-links"
     private static let generatedShareLinkMigrationKey = "kGeneratedShareLinkRemoteConfigMigrationVersion"
     private static let defaultGeoIPDataURL = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
@@ -20,6 +20,8 @@ class RemoteConfigManager {
     private static let shareLinkSchemes = [
         "ss://", "vmess://", "trojan://", "vless://",
         "hysteria://", "hysteria2://", "hy2://",
+        "tuic://", "ssr://", "socks://", "socks5://", "socks5h://",
+        "http://", "https://", "anytls://", "mierus://"
     ]
 
     var configs: [RemoteConfigModel] = []
@@ -164,7 +166,9 @@ class RemoteConfigManager {
             return
         }
         urlRequest.cachePolicy = .reloadIgnoringCacheData
-        urlRequest.setValue(subscriptionUserAgent, forHTTPHeaderField: "User-Agent")
+        let userAgent = config.userAgent?.trimmingCharacters(in: .whitespacesAndNewlines)
+        urlRequest.setValue(userAgent?.isEmpty == false ? userAgent : subscriptionUserAgent,
+                            forHTTPHeaderField: "User-Agent")
 
         AF.request(urlRequest)
             .validate()
@@ -210,6 +214,10 @@ class RemoteConfigManager {
     // MARK: - Share link parsing
 
     private static func buildConfigFromShareLinks(_ decoded: String) -> String? {
+        if let converted = buildConfigFromShareLinksUsingMihomo(decoded) {
+            return converted
+        }
+
         let lines = decoded
             .split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -312,6 +320,15 @@ class RemoteConfigManager {
           - GEOIP,CN,DIRECT
           - MATCH,Auto
         """
+    }
+
+    private static func buildConfigFromShareLinksUsingMihomo(_ decoded: String) -> String? {
+        guard let converted = clashConvertShareLinks(decoded.goStringBuffer())?.toString(),
+              !converted.hasPrefix("error:"),
+              verifyConfig(string: converted) == nil else {
+            return nil
+        }
+        return converted
     }
 
     private static func isGeneratedShareLinkConfig(_ string: String) -> Bool {
