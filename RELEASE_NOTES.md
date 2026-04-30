@@ -1,15 +1,10 @@
-## ClashFX 1.0.23
+### Bug Fixes
 
-### Bug Fixes / 问题修复
-
-- **Prioritized the `Proxy` selector in generated share-link configs** — Generated compatibility configs now define `Proxy` before `Auto`, migrate existing generated templates, and sort selector groups before automatic groups in the tray menu. Choosing a fixed node in `Proxy` now remains the clear primary route, while `Auto` stays visible as the automatic test group status.
-
----
-
-### 问题修复
-
-- **优先显示 `Proxy` 选择入口** — 生成的分享链接兼容配置现在会先定义 `Proxy`、再定义 `Auto`，并迁移已有自动生成模板；托盘菜单也会优先显示选择组，再显示自动组。用户在 `Proxy` 中选择固定节点时，路由入口更清晰；`Auto` 仍保留用于查看自动测速组当前状态。
+- **Subscriptions** — Fixed an issue where raw base64 share-link subscriptions failed to import due to improper validation order.
+- **Config Parser** — Tightened remote config verification to catch semantic formatting errors earlier.
 
 ---
+### 修复
 
-[![Download ClashFX](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/clashfx/files/1.0.23/)
+- **订阅节点** — 修复了从纯 Base64 的 Share-links 导入订阅时因校验顺序错误导致所有节点无法连接的问题。
+- **配置校验** — 优化了远端配置格式的早期校验逻辑，能在应用前更准确地拦截格式错误。
