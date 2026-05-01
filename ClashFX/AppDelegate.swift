@@ -1402,13 +1402,27 @@ extension AppDelegate {
 extension AppDelegate {
     func selectProxyGroupWithMemory() {
         let copy = [SavedProxyModel](ConfigManager.selectedProxyRecords)
-        for item in copy {
-            guard item.config == ConfigManager.selectConfigName else { continue }
+        let records = copy.filter { $0.config == ConfigManager.selectConfigName }
+        guard !records.isEmpty else { return }
+
+        let group = DispatchGroup()
+        var didRestoreProxySelection = false
+        for item in records {
             Logger.log("Auto selecting \(item.group) \(item.selected)", level: .debug)
+            group.enter()
             ApiRequest.updateProxyGroup(group: item.group, selectProxy: item.selected) { success in
-                if !success {
+                if success {
+                    didRestoreProxySelection = true
+                } else {
                     Logger.log("Failed to restore proxy selection: \(item.group) -> \(item.selected), keeping record for next retry", level: .warning)
                 }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            if didRestoreProxySelection {
+                ConnectionManager.closeAllConnection()
             }
         }
     }

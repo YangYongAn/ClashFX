@@ -13,6 +13,7 @@ class RemoteConfigManager {
     private static let generatedShareLinkTemplateVersion = 8
     private static let generatedShareLinkMarker = "clashfx-generated: share-links"
     private static let generatedShareLinkMigrationKey = "kGeneratedShareLinkRemoteConfigMigrationVersion"
+    private static let generatedShareLinkLocalMatchAutoMigrationKey = "kGeneratedShareLinkLocalMatchAutoMigrated"
     private static let shareLinkSchemes = [
         "ss://", "vmess://", "trojan://", "vless://",
         "hysteria://", "hysteria2://", "hy2://",
@@ -503,6 +504,17 @@ class RemoteConfigManager {
         return Int(parts[1].trimmingCharacters(in: .whitespaces))
     }
 
+    private static func upgradedGeneratedShareLinkConfig(_ string: String) -> String? {
+        guard isGeneratedShareLinkConfig(string),
+              string.contains("- MATCH,Auto"),
+              string.contains("- name: \"Proxy\"") else {
+            return nil
+        }
+
+        let upgraded = string.replacingOccurrences(of: "- MATCH,Auto", with: "- MATCH,Proxy")
+        return upgraded == string ? nil : upgraded
+    }
+
     private static func isLegacyGeneratedShareLinkConfig(_ string: String) -> Bool {
         if isGeneratedShareLinkConfig(string) {
             return true
@@ -538,11 +550,36 @@ class RemoteConfigManager {
         return (isLegacyGeneratedShareLinkConfig(finalConfig), isLegacyGeneratedShareLinkConfig(finalConfig) ? generatedShareLinkTemplateVersion : nil)
     }
 
+    private func migrateGeneratedLocalConfigFiles() -> [String] {
+        ConfigManager.getConfigFilesList().compactMap { name in
+            let path = Paths.localConfigPath(for: name)
+            guard let content = try? String(contentsOfFile: path, encoding: .utf8),
+                  let upgraded = Self.upgradedGeneratedShareLinkConfig(content) else {
+                return nil
+            }
+
+            do {
+                try upgraded.write(to: URL(fileURLWithPath: path), atomically: true, encoding: .utf8)
+                Logger.log("[Generated Config Migration] Updated generated config fallback rule: \(name)")
+                return name
+            } catch {
+                Logger.log("[Generated Config Migration] Failed to update generated config '\(name)': \(error.localizedDescription)", level: .warning)
+                return nil
+            }
+        }
+    }
+
     func migrateLegacyGeneratedRemoteConfigsIfNeeded() {
         let targetVersion = Self.generatedShareLinkTemplateVersion
         let completedVersion = UserDefaults.standard.integer(forKey: Self.generatedShareLinkMigrationKey)
-        guard completedVersion < targetVersion else { return }
-        guard AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch else { return }
+        let shouldRunLocalMigration = !UserDefaults.standard.bool(forKey: Self.generatedShareLinkLocalMatchAutoMigrationKey) &&
+            (completedVersion < targetVersion || AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch)
+        let locallyRepairedConfigs = shouldRunLocalMigration ? migrateGeneratedLocalConfigFiles() : []
+        if shouldRunLocalMigration {
+            UserDefaults.standard.set(true, forKey: Self.generatedShareLinkLocalMatchAutoMigrationKey)
+        }
+        guard completedVersion < targetVersion || !locallyRepairedConfigs.isEmpty else { return }
+        guard AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch || !locallyRepairedConfigs.isEmpty else { return }
 
         let candidates = configs.filter { config in
             if config.generatedByShareLinks,
@@ -557,14 +594,23 @@ class RemoteConfigManager {
             return Self.isLegacyGeneratedShareLinkConfig(content)
         }
 
+        let didRepairSelectedLocalConfig = locallyRepairedConfigs.contains(ConfigManager.selectConfigName)
         guard !candidates.isEmpty else {
             UserDefaults.standard.set(targetVersion, forKey: Self.generatedShareLinkMigrationKey)
+            if !locallyRepairedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Repaired \(locallyRepairedConfigs.count) generated local config fallback rule(s): \(locallyRepairedConfigs.joined(separator: ", "))")
+            }
+            if didRepairSelectedLocalConfig {
+                NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Repaired", comment: ""),
+                                                      info: NSLocalizedString("The active ClashFX-generated compatibility config fallback rule was repaired to route through Proxy. Your custom rule files were not changed.", comment: ""))
+                AppDelegate.shared.updateConfig(showNotification: false)
+            }
             return
         }
 
         let group = DispatchGroup()
-        var didUpdateSelectedConfig = false
-        var upgradedConfigs = [String]()
+        var didUpdateSelectedRemoteConfig = false
+        var remotelyUpgradedConfigs = [String]()
 
         for config in candidates {
             group.enter()
@@ -581,10 +627,10 @@ class RemoteConfigManager {
 
                 Self.updateConfig(config: config) { error in
                     if error == nil {
-                        upgradedConfigs.append(config.name)
+                        remotelyUpgradedConfigs.append(config.name)
                         Logger.log("[Generated Config Migration] Auto-upgraded remote config '\(config.name)' to geosite template v\(targetVersion)")
                         if config.name == ConfigManager.selectConfigName {
-                            didUpdateSelectedConfig = true
+                            didUpdateSelectedRemoteConfig = true
                         }
                     } else {
                         let message = error ?? "unknown error"
@@ -598,12 +644,19 @@ class RemoteConfigManager {
         group.notify(queue: .main) {
             self.saveConfigs()
             UserDefaults.standard.set(targetVersion, forKey: Self.generatedShareLinkMigrationKey)
-            if !upgradedConfigs.isEmpty {
-                Logger.log("[Generated Config Migration] Upgraded \(upgradedConfigs.count) generated remote config(s): \(upgradedConfigs.joined(separator: ", "))")
+            if !locallyRepairedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Repaired \(locallyRepairedConfigs.count) generated local config fallback rule(s): \(locallyRepairedConfigs.joined(separator: ", "))")
             }
-            if didUpdateSelectedConfig {
+            if !remotelyUpgradedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Upgraded \(remotelyUpgradedConfigs.count) generated remote config(s): \(remotelyUpgradedConfigs.joined(separator: ", "))")
+            }
+            if didUpdateSelectedRemoteConfig {
                 NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Auto-Upgraded", comment: ""),
                                                       info: NSLocalizedString("The active ClashFX-generated remote compatibility config was upgraded to the geosite + geoip CN direct template. Your custom rule files were not changed.", comment: ""))
+                AppDelegate.shared.updateConfig(showNotification: false)
+            } else if didRepairSelectedLocalConfig {
+                NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Repaired", comment: ""),
+                                                      info: NSLocalizedString("The active ClashFX-generated compatibility config fallback rule was repaired to route through Proxy. Your custom rule files were not changed.", comment: ""))
                 AppDelegate.shared.updateConfig(showNotification: false)
             }
         }
