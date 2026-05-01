@@ -89,11 +89,21 @@ class MenuItemFactory {
     }
 
     static func generateSwitchConfigMenuItems(complete: @escaping (([NSMenuItem]) -> Void)) {
+        let remoteConfigsByName = Dictionary(uniqueKeysWithValues:
+            RemoteConfigManager.shared.configs.map { ($0.name, $0) })
+
         let generateMenuItem: ((String) -> NSMenuItem) = {
             config in
             let item = NSMenuItem(title: config, action: #selector(MenuItemFactory.actionSelectConfig(sender:)), keyEquivalent: "")
             item.target = MenuItemFactory.self
             item.state = ConfigManager.selectConfigName == config ? .on : .off
+            if let info = remoteConfigsByName[config]?.subscriptionInfo,
+               let summary = SubscriptionInfoFormatter.menuSubtitle(for: info) {
+                item.attributedTitle = SubscriptionInfoFormatter.menuAttributedTitle(
+                    title: config,
+                    subtitle: summary
+                )
+            }
             return item
         }
 
