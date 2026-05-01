@@ -10,13 +10,10 @@ import Alamofire
 import Cocoa
 
 class RemoteConfigManager {
-    private static let generatedShareLinkTemplateVersion = 7
+    private static let generatedShareLinkTemplateVersion = 8
     private static let generatedShareLinkMarker = "clashfx-generated: share-links"
     private static let generatedShareLinkMigrationKey = "kGeneratedShareLinkRemoteConfigMigrationVersion"
-    private static let defaultGeoIPDataURL = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geoip.dat"
-    private static let defaultGeoSiteDataURL = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/geosite.dat"
-    private static let defaultMMDBDataURL = "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release/country.mmdb"
-
+    private static let generatedShareLinkLocalMatchAutoMigrationKey = "kGeneratedShareLinkLocalMatchAutoMigrated"
     private static let shareLinkSchemes = [
         "ss://", "vmess://", "trojan://", "vless://",
         "hysteria://", "hysteria2://", "hy2://",
@@ -159,7 +156,7 @@ class RemoteConfigManager {
     /// mihomo-based core, so using a mihomo UA avoids that false downgrade.
     private static let subscriptionUserAgent = "mihomo/1.19.24"
 
-    static func getRemoteConfigData(config: RemoteConfigModel, complete: @escaping ((String?, String?) -> Void)) {
+    static func getRemoteConfigData(config: RemoteConfigModel, complete: @escaping ((String?, String?, [AnyHashable: Any]?) -> Void)) {
         guard var urlRequest = try? URLRequest(url: config.url, method: .get) else {
             assertionFailure()
             Logger.log("[getRemoteConfigData] url incorrect,\(config.name) \(config.url)")
@@ -173,8 +170,120 @@ class RemoteConfigManager {
         AF.request(urlRequest)
             .validate()
             .responseString(encoding: .utf8) { res in
-                complete(try? res.result.get(), res.response?.suggestedFilename)
+                complete(try? res.result.get(), res.response?.suggestedFilename, res.response?.allHeaderFields)
             }
+    }
+
+    /// Parses the `Subscription-Userinfo` HTTP response header into a
+    /// `SubscriptionInfo`. Returns nil when the header is missing or empty.
+    /// Accepts both `;` and `; ` separators and is case-insensitive on keys.
+    static func parseSubscriptionUserinfoHeader(_ headers: [AnyHashable: Any]?) -> SubscriptionInfo? {
+        guard let headers else { return nil }
+        let raw: String? = headers.first { key, _ in
+            (key as? String)?.lowercased() == "subscription-userinfo"
+        }?.value as? String
+        guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+
+        var info = SubscriptionInfo()
+        for pair in value.split(separator: ";") {
+            let trimmed = pair.trimmingCharacters(in: .whitespaces)
+            let parts = trimmed.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else { continue }
+            let key = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+            let val = parts[1].trimmingCharacters(in: .whitespaces)
+            switch key {
+            case "upload": info.upload = Int64(val)
+            case "download": info.download = Int64(val)
+            case "total": info.total = Int64(val)
+            case "expire":
+                if let seconds = TimeInterval(val), seconds > 0 {
+                    info.expire = seconds
+                }
+            default: break
+            }
+        }
+        return info.hasAnyData ? info : nil
+    }
+
+    /// Fallback parser for subscription bodies that embed traffic / expiry
+    /// information as pseudo-proxy entries instead of (or in addition to) the
+    /// `Subscription-Userinfo` header.
+    ///
+    /// Recognises common Chinese and English variants used by SS-Panel /
+    /// V2Board style providers, e.g.:
+    /// - "剩余流量：117.35 GB"
+    /// - "套餐到期：长期有效"
+    /// - "Traffic: 50.5 GB / 100 GB"
+    /// - "Expire: 2026-12-31"
+    static func parseSubscriptionInfoFromBody(_ body: String) -> SubscriptionInfo? {
+        var info = SubscriptionInfo()
+
+        let lines = body.split(whereSeparator: \.isNewline).map { String($0) }
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if let total = matchByteValue(in: trimmed, after: ["总流量", "Total Traffic", "Total"]) {
+                info.total = total
+            }
+            if let used = matchByteValue(in: trimmed, after: ["已用流量", "Used", "已使用"]) {
+                if info.upload == nil && info.download == nil {
+                    info.download = used
+                }
+            }
+            if let remaining = matchByteValue(in: trimmed, after: ["剩余流量", "Remaining Traffic", "Remaining"]),
+               let total = info.total ?? matchByteValue(in: trimmed, after: ["总流量", "Total"]) {
+                info.total = total
+                if info.upload == nil && info.download == nil {
+                    info.download = max(0, total - remaining)
+                }
+            }
+            if let text = matchExpireText(in: trimmed) {
+                info.expireText = text
+            }
+        }
+
+        return info.hasAnyData ? info : nil
+    }
+
+    private static let byteUnitMultipliers: [(suffix: String, multiplier: Double)] = [
+        ("PB", 1_125_899_906_842_624),
+        ("TB", 1_099_511_627_776),
+        ("GB", 1_073_741_824),
+        ("MB", 1_048_576),
+        ("KB", 1024),
+        ("B", 1)
+    ]
+
+    private static func matchByteValue(in line: String, after labels: [String]) -> Int64? {
+        for label in labels {
+            guard let labelRange = line.range(of: label, options: .caseInsensitive) else { continue }
+            let tail = line[labelRange.upperBound...]
+            let scanner = Scanner(string: String(tail))
+            scanner.charactersToBeSkipped = CharacterSet(charactersIn: " ：:=|/-\t")
+            var number: Double = 0
+            guard scanner.scanDouble(&number) else { continue }
+            let remaining = scanner.string[scanner.string.index(scanner.string.startIndex, offsetBy: scanner.scanLocation)...]
+            let upper = remaining.trimmingCharacters(in: .whitespaces).uppercased()
+            for (suffix, multiplier) in byteUnitMultipliers where upper.hasPrefix(suffix) {
+                return Int64(number * multiplier)
+            }
+            return Int64(number)
+        }
+        return nil
+    }
+
+    private static func matchExpireText(in line: String) -> String? {
+        let labels = ["套餐到期", "到期时间", "Expire", "Expires", "Expiry"]
+        for label in labels {
+            guard let labelRange = line.range(of: label, options: .caseInsensitive) else { continue }
+            let tail = line[labelRange.upperBound...]
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ：:=|/-\t"))
+            guard !tail.isEmpty else { continue }
+            return String(tail).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return nil
     }
 
     static func tryDecodeBase64(_ string: String) -> String? {
@@ -251,35 +360,49 @@ class RemoteConfigManager {
         guard !proxies.isEmpty else { return nil }
 
         let proxyList = names.joined(separator: ", ")
+        let nameserverPolicy = nameserverPolicyYAML(from: proxies)
         return """
         # \(generatedShareLinkMarker)
         # clashfx-template-version: \(generatedShareLinkTemplateVersion)
         # This file was auto-generated by ClashFX from share-link subscriptions.
         # It is a compatibility config, not a user-authored rule file.
         # ClashFX may safely auto-upgrade this generated template.
-        # Current template: geosite + geoip CN direct routing.
+        # Current template: DNS policy + geodata-free rules.
+        mixed-port: 7890
+        allow-lan: false
+        bind-address: "*"
         mode: rule
         log-level: info
-        geodata-mode: true
-
-        geox-url:
-          geoip: "\(defaultGeoIPDataURL)"
-          geosite: "\(defaultGeoSiteDataURL)"
-          mmdb: "\(defaultMMDBDataURL)"
-
+        ipv6: true
+        udp: true
+        unified-delay: true
+        cfw-latency-timeout: 8000
+        cfw-latency-url: "http://YouTube.com/generate_204"
+        cfw-conn-break-strategy: true
         dns:
           enable: true
-          ipv6: false
+          listen: "127.0.0.1:1053"
+          ipv6: true
           enhanced-mode: redir-host
-          nameserver:
+          default-nameserver:
+            - 114.114.114.114
             - 223.5.5.5
             - 119.29.29.29
+          nameserver:
+            - https://223.5.5.5/dns-query
+            - https://doh.pub/dns-query
+            - 119.29.29.29
+            - 223.5.5.5
+            - tls://223.5.5.5:853
+            - tls://223.6.6.6:853
           fallback:
-            - 1.1.1.1
-            - 8.8.8.8
+            - https://223.5.5.5/dns-query
+            - https://doh.pub/dns-query
+            - tls://1.1.1.1:853
+            - tls://8.8.8.8:853
           fallback-filter:
-            geoip: true
-            geoip-code: CN
+            geoip: false
+        \(nameserverPolicy)
 
         proxies:
         \(proxies.joined(separator: "\n"))
@@ -291,15 +414,14 @@ class RemoteConfigManager {
           - name: "Auto"
             type: url-test
             proxies: [\(proxyList)]
-            url: "http://cp.cloudflare.com/generate_204"
+            url: "http://YouTube.com/generate_204"
             interval: 300
+            tolerance: 200
 
         rules:
           - DOMAIN,localhost,DIRECT
           - DOMAIN-SUFFIX,local,DIRECT
           - DOMAIN-SUFFIX,cn,DIRECT
-          - GEOSITE,private,DIRECT
-          - GEOSITE,cn,DIRECT
           - DOMAIN,www.baidu.com,DIRECT
           - DOMAIN,baidu.com,DIRECT
           - DOMAIN-KEYWORD,baidu,DIRECT
@@ -316,16 +438,50 @@ class RemoteConfigManager {
           - IP-CIDR6,::1/128,DIRECT,no-resolve
           - IP-CIDR6,fc00::/7,DIRECT,no-resolve
           - IP-CIDR6,fe80::/10,DIRECT,no-resolve
-          - GEOIP,private,DIRECT
-          - GEOIP,CN,DIRECT
           - MATCH,Proxy
         """
     }
 
+    private static func nameserverPolicyYAML(from proxyYAMLBlocks: [String]) -> String {
+        let servers = proxyYAMLBlocks.compactMap { block -> String? in
+            guard let line = block
+                .split(whereSeparator: \.isNewline)
+                .map(String.init)
+                .first(where: { $0.trimmingCharacters(in: .whitespaces).hasPrefix("server:") }) else {
+                return nil
+            }
+            let value = line
+                .split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+                .dropFirst()
+                .joined(separator: ":")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            guard !value.isEmpty, !value.contains(":") else { return nil }
+            let isIPv4 = value.split(separator: ".").count == 4 && value.allSatisfy { $0.isNumber || $0 == "." }
+            return isIPv4 ? nil : value
+        }
+        let uniqueServers = Array(Set(servers)).sorted()
+        guard !uniqueServers.isEmpty else { return "" }
+        let policies = uniqueServers
+            .map { "          \($0): \"https://223.5.5.5/dns-query\"" }
+            .joined(separator: "\n")
+        return """
+          nameserver-policy:
+        \(policies)
+        """
+    }
+
     private static func buildConfigFromShareLinksUsingMihomo(_ decoded: String) -> String? {
-        guard let converted = clashConvertShareLinks(decoded.goStringBuffer())?.toString(),
-              !converted.hasPrefix("error:"),
-              verifyConfig(string: converted) == nil else {
+        guard let converted = clashConvertShareLinks(decoded.goStringBuffer())?.toString() else {
+            Logger.log("[Remote Config] Mihomo converter returned empty result", level: .warning)
+            return nil
+        }
+        if converted.hasPrefix("error:") {
+            Logger.log("[Remote Config] Mihomo converter failed: \(converted)", level: .warning)
+            return nil
+        }
+        if let verifyError = verifyConfig(string: converted) {
+            Logger.log("[Remote Config] Mihomo converted config verification failed: \(verifyError)", level: .warning)
             return nil
         }
         return converted
@@ -346,6 +502,17 @@ class RemoteConfigManager {
         let parts = line.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
         guard parts.count == 2 else { return nil }
         return Int(parts[1].trimmingCharacters(in: .whitespaces))
+    }
+
+    private static func upgradedGeneratedShareLinkConfig(_ string: String) -> String? {
+        guard isGeneratedShareLinkConfig(string),
+              string.contains("- MATCH,Auto"),
+              string.contains("- name: \"Proxy\"") else {
+            return nil
+        }
+
+        let upgraded = string.replacingOccurrences(of: "- MATCH,Auto", with: "- MATCH,Proxy")
+        return upgraded == string ? nil : upgraded
     }
 
     private static func isLegacyGeneratedShareLinkConfig(_ string: String) -> Bool {
@@ -383,11 +550,36 @@ class RemoteConfigManager {
         return (isLegacyGeneratedShareLinkConfig(finalConfig), isLegacyGeneratedShareLinkConfig(finalConfig) ? generatedShareLinkTemplateVersion : nil)
     }
 
+    private func migrateGeneratedLocalConfigFiles() -> [String] {
+        ConfigManager.getConfigFilesList().compactMap { name in
+            let path = Paths.localConfigPath(for: name)
+            guard let content = try? String(contentsOfFile: path, encoding: .utf8),
+                  let upgraded = Self.upgradedGeneratedShareLinkConfig(content) else {
+                return nil
+            }
+
+            do {
+                try upgraded.write(to: URL(fileURLWithPath: path), atomically: true, encoding: .utf8)
+                Logger.log("[Generated Config Migration] Updated generated config fallback rule: \(name)")
+                return name
+            } catch {
+                Logger.log("[Generated Config Migration] Failed to update generated config '\(name)': \(error.localizedDescription)", level: .warning)
+                return nil
+            }
+        }
+    }
+
     func migrateLegacyGeneratedRemoteConfigsIfNeeded() {
         let targetVersion = Self.generatedShareLinkTemplateVersion
         let completedVersion = UserDefaults.standard.integer(forKey: Self.generatedShareLinkMigrationKey)
-        guard completedVersion < targetVersion else { return }
-        guard AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch else { return }
+        let shouldRunLocalMigration = !UserDefaults.standard.bool(forKey: Self.generatedShareLinkLocalMatchAutoMigrationKey) &&
+            (completedVersion < targetVersion || AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch)
+        let locallyRepairedConfigs = shouldRunLocalMigration ? migrateGeneratedLocalConfigFiles() : []
+        if shouldRunLocalMigration {
+            UserDefaults.standard.set(true, forKey: Self.generatedShareLinkLocalMatchAutoMigrationKey)
+        }
+        guard completedVersion < targetVersion || !locallyRepairedConfigs.isEmpty else { return }
+        guard AppVersionUtil.hasVersionChanged || AppVersionUtil.isFirstLaunch || !locallyRepairedConfigs.isEmpty else { return }
 
         let candidates = configs.filter { config in
             if config.generatedByShareLinks,
@@ -402,18 +594,27 @@ class RemoteConfigManager {
             return Self.isLegacyGeneratedShareLinkConfig(content)
         }
 
+        let didRepairSelectedLocalConfig = locallyRepairedConfigs.contains(ConfigManager.selectConfigName)
         guard !candidates.isEmpty else {
             UserDefaults.standard.set(targetVersion, forKey: Self.generatedShareLinkMigrationKey)
+            if !locallyRepairedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Repaired \(locallyRepairedConfigs.count) generated local config fallback rule(s): \(locallyRepairedConfigs.joined(separator: ", "))")
+            }
+            if didRepairSelectedLocalConfig {
+                NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Repaired", comment: ""),
+                                                      info: NSLocalizedString("The active ClashFX-generated compatibility config fallback rule was repaired to route through Proxy. Your custom rule files were not changed.", comment: ""))
+                AppDelegate.shared.updateConfig(showNotification: false)
+            }
             return
         }
 
         let group = DispatchGroup()
-        var didUpdateSelectedConfig = false
-        var upgradedConfigs = [String]()
+        var didUpdateSelectedRemoteConfig = false
+        var remotelyUpgradedConfigs = [String]()
 
         for config in candidates {
             group.enter()
-            Self.getRemoteConfigData(config: config) { rawConfig, _ in
+            Self.getRemoteConfigData(config: config) { rawConfig, _, _ in
                 guard let rawConfig else {
                     group.leave()
                     return
@@ -426,10 +627,10 @@ class RemoteConfigManager {
 
                 Self.updateConfig(config: config) { error in
                     if error == nil {
-                        upgradedConfigs.append(config.name)
+                        remotelyUpgradedConfigs.append(config.name)
                         Logger.log("[Generated Config Migration] Auto-upgraded remote config '\(config.name)' to geosite template v\(targetVersion)")
                         if config.name == ConfigManager.selectConfigName {
-                            didUpdateSelectedConfig = true
+                            didUpdateSelectedRemoteConfig = true
                         }
                     } else {
                         let message = error ?? "unknown error"
@@ -443,12 +644,19 @@ class RemoteConfigManager {
         group.notify(queue: .main) {
             self.saveConfigs()
             UserDefaults.standard.set(targetVersion, forKey: Self.generatedShareLinkMigrationKey)
-            if !upgradedConfigs.isEmpty {
-                Logger.log("[Generated Config Migration] Upgraded \(upgradedConfigs.count) generated remote config(s): \(upgradedConfigs.joined(separator: ", "))")
+            if !locallyRepairedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Repaired \(locallyRepairedConfigs.count) generated local config fallback rule(s): \(locallyRepairedConfigs.joined(separator: ", "))")
             }
-            if didUpdateSelectedConfig {
+            if !remotelyUpgradedConfigs.isEmpty {
+                Logger.log("[Generated Config Migration] Upgraded \(remotelyUpgradedConfigs.count) generated remote config(s): \(remotelyUpgradedConfigs.joined(separator: ", "))")
+            }
+            if didUpdateSelectedRemoteConfig {
                 NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Auto-Upgraded", comment: ""),
                                                       info: NSLocalizedString("The active ClashFX-generated remote compatibility config was upgraded to the geosite + geoip CN direct template. Your custom rule files were not changed.", comment: ""))
+                AppDelegate.shared.updateConfig(showNotification: false)
+            } else if didRepairSelectedLocalConfig {
+                NSUserNotificationCenter.default.post(title: NSLocalizedString("Compatibility Config Repaired", comment: ""),
+                                                      info: NSLocalizedString("The active ClashFX-generated compatibility config fallback rule was repaired to route through Proxy. Your custom rule files were not changed.", comment: ""))
                 AppDelegate.shared.updateConfig(showNotification: false)
             }
         }
@@ -538,6 +746,17 @@ class RemoteConfigManager {
             .replacingOccurrences(of: "\"", with: "\\\"")
     }
 
+    private static func isSubscriptionInfoProxyName(_ name: String) -> Bool {
+        let containsMarkers = ["剩余流量", "套餐到期", "过滤掉", "官网", "订阅", "用户群"]
+        if containsMarkers.contains(where: { name.contains($0) }) {
+            return true
+        }
+
+        let lowerName = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let prefixMarkers = ["traffic", "expire", "expired", "remaining traffic", "subscription"]
+        return prefixMarkers.contains(where: { lowerName.hasPrefix($0) })
+    }
+
     // MARK: - Generic proxy result
 
     private struct ParsedProxyResult {
@@ -546,21 +765,28 @@ class RemoteConfigManager {
     }
 
     private static func parseShareLink(_ line: String) -> ParsedProxyResult? {
+        let result: ParsedProxyResult?
         if line.hasPrefix("ss://") {
             guard let ss = parseSSShareLink(line) else { return nil }
-            return ParsedProxyResult(name: ss.name, yaml: ss.yaml)
+            result = ParsedProxyResult(name: ss.name, yaml: ss.yaml)
         } else if line.hasPrefix("vmess://") {
-            return parseVmessShareLink(line)
+            result = parseVmessShareLink(line)
         } else if line.hasPrefix("trojan://") {
-            return parseTrojanShareLink(line)
+            result = parseTrojanShareLink(line)
         } else if line.hasPrefix("vless://") {
-            return parseVlessShareLink(line)
+            result = parseVlessShareLink(line)
         } else if line.hasPrefix("hysteria2://") || line.hasPrefix("hy2://") {
-            return parseHysteria2ShareLink(line)
+            result = parseHysteria2ShareLink(line)
         } else if line.hasPrefix("hysteria://") {
-            return parseHysteriaShareLink(line)
+            result = parseHysteriaShareLink(line)
+        } else {
+            result = nil
         }
-        return nil
+
+        guard let result, !isSubscriptionInfoProxyName(result.name) else {
+            return nil
+        }
+        return result
     }
 
     // MARK: - VMess share link parser (V2RayN base64 JSON format)
@@ -893,7 +1119,7 @@ class RemoteConfigManager {
     }
 
     static func updateConfig(config: RemoteConfigModel, complete: ((String?) -> Void)? = nil) {
-        getRemoteConfigData(config: config) { configString, suggestedFilename in
+        getRemoteConfigData(config: config) { configString, suggestedFilename, responseHeaders in
             guard let rawConfig = configString else {
                 complete?(NSLocalizedString("Download fail", comment: ""))
                 return
@@ -913,6 +1139,13 @@ class RemoteConfigManager {
             let generatedInfo = classifyGeneratedTemplate(rawConfig: rawConfig, finalConfig: newConfig)
             config.generatedByShareLinks = generatedInfo.generatedByShareLinks
             config.generatedTemplateVersion = generatedInfo.templateVersion
+
+            let headerInfo = parseSubscriptionUserinfoHeader(responseHeaders)
+            let bodyInfo = parseSubscriptionInfoFromBody(rawConfig)
+            config.subscriptionInfo = SubscriptionInfo.merging(primary: headerInfo, fallback: bodyInfo)
+            if let info = config.subscriptionInfo {
+                Logger.log("[Remote Config] Captured subscription info for \(config.name): upload=\(info.upload ?? -1) download=\(info.download ?? -1) total=\(info.total ?? -1) expire=\(info.expire ?? 0) expireText=\(info.expireText ?? "-")")
+            }
 
             let verifyRes = verifyConfig(string: newConfig)
             if let error = verifyRes {
