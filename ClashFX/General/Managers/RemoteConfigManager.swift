@@ -155,7 +155,7 @@ class RemoteConfigManager {
     /// mihomo-based core, so using a mihomo UA avoids that false downgrade.
     private static let subscriptionUserAgent = "mihomo/1.19.24"
 
-    static func getRemoteConfigData(config: RemoteConfigModel, complete: @escaping ((String?, String?) -> Void)) {
+    static func getRemoteConfigData(config: RemoteConfigModel, complete: @escaping ((String?, String?, [AnyHashable: Any]?) -> Void)) {
         guard var urlRequest = try? URLRequest(url: config.url, method: .get) else {
             assertionFailure()
             Logger.log("[getRemoteConfigData] url incorrect,\(config.name) \(config.url)")
@@ -169,8 +169,120 @@ class RemoteConfigManager {
         AF.request(urlRequest)
             .validate()
             .responseString(encoding: .utf8) { res in
-                complete(try? res.result.get(), res.response?.suggestedFilename)
+                complete(try? res.result.get(), res.response?.suggestedFilename, res.response?.allHeaderFields)
             }
+    }
+
+    /// Parses the `Subscription-Userinfo` HTTP response header into a
+    /// `SubscriptionInfo`. Returns nil when the header is missing or empty.
+    /// Accepts both `;` and `; ` separators and is case-insensitive on keys.
+    static func parseSubscriptionUserinfoHeader(_ headers: [AnyHashable: Any]?) -> SubscriptionInfo? {
+        guard let headers else { return nil }
+        let raw: String? = headers.first { key, _ in
+            (key as? String)?.lowercased() == "subscription-userinfo"
+        }?.value as? String
+        guard let value = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+
+        var info = SubscriptionInfo()
+        for pair in value.split(separator: ";") {
+            let trimmed = pair.trimmingCharacters(in: .whitespaces)
+            let parts = trimmed.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else { continue }
+            let key = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+            let val = parts[1].trimmingCharacters(in: .whitespaces)
+            switch key {
+            case "upload": info.upload = Int64(val)
+            case "download": info.download = Int64(val)
+            case "total": info.total = Int64(val)
+            case "expire":
+                if let seconds = TimeInterval(val), seconds > 0 {
+                    info.expire = seconds
+                }
+            default: break
+            }
+        }
+        return info.hasAnyData ? info : nil
+    }
+
+    /// Fallback parser for subscription bodies that embed traffic / expiry
+    /// information as pseudo-proxy entries instead of (or in addition to) the
+    /// `Subscription-Userinfo` header.
+    ///
+    /// Recognises common Chinese and English variants used by SS-Panel /
+    /// V2Board style providers, e.g.:
+    /// - "剩余流量：117.35 GB"
+    /// - "套餐到期：长期有效"
+    /// - "Traffic: 50.5 GB / 100 GB"
+    /// - "Expire: 2026-12-31"
+    static func parseSubscriptionInfoFromBody(_ body: String) -> SubscriptionInfo? {
+        var info = SubscriptionInfo()
+
+        let lines = body.split(whereSeparator: \.isNewline).map { String($0) }
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            if let total = matchByteValue(in: trimmed, after: ["总流量", "Total Traffic", "Total"]) {
+                info.total = total
+            }
+            if let used = matchByteValue(in: trimmed, after: ["已用流量", "Used", "已使用"]) {
+                if info.upload == nil && info.download == nil {
+                    info.download = used
+                }
+            }
+            if let remaining = matchByteValue(in: trimmed, after: ["剩余流量", "Remaining Traffic", "Remaining"]),
+               let total = info.total ?? matchByteValue(in: trimmed, after: ["总流量", "Total"]) {
+                info.total = total
+                if info.upload == nil && info.download == nil {
+                    info.download = max(0, total - remaining)
+                }
+            }
+            if let text = matchExpireText(in: trimmed) {
+                info.expireText = text
+            }
+        }
+
+        return info.hasAnyData ? info : nil
+    }
+
+    private static let byteUnitMultipliers: [(suffix: String, multiplier: Double)] = [
+        ("PB", 1_125_899_906_842_624),
+        ("TB", 1_099_511_627_776),
+        ("GB", 1_073_741_824),
+        ("MB", 1_048_576),
+        ("KB", 1024),
+        ("B", 1)
+    ]
+
+    private static func matchByteValue(in line: String, after labels: [String]) -> Int64? {
+        for label in labels {
+            guard let labelRange = line.range(of: label, options: .caseInsensitive) else { continue }
+            let tail = line[labelRange.upperBound...]
+            let scanner = Scanner(string: String(tail))
+            scanner.charactersToBeSkipped = CharacterSet(charactersIn: " ：:=|/-\t")
+            var number: Double = 0
+            guard scanner.scanDouble(&number) else { continue }
+            let remaining = scanner.string[scanner.string.index(scanner.string.startIndex, offsetBy: scanner.scanLocation)...]
+            let upper = remaining.trimmingCharacters(in: .whitespaces).uppercased()
+            for (suffix, multiplier) in byteUnitMultipliers where upper.hasPrefix(suffix) {
+                return Int64(number * multiplier)
+            }
+            return Int64(number)
+        }
+        return nil
+    }
+
+    private static func matchExpireText(in line: String) -> String? {
+        let labels = ["套餐到期", "到期时间", "Expire", "Expires", "Expiry"]
+        for label in labels {
+            guard let labelRange = line.range(of: label, options: .caseInsensitive) else { continue }
+            let tail = line[labelRange.upperBound...]
+                .trimmingCharacters(in: CharacterSet(charactersIn: " ：:=|/-\t"))
+            guard !tail.isEmpty else { continue }
+            return String(tail).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return nil
     }
 
     static func tryDecodeBase64(_ string: String) -> String? {
@@ -456,7 +568,7 @@ class RemoteConfigManager {
 
         for config in candidates {
             group.enter()
-            Self.getRemoteConfigData(config: config) { rawConfig, _ in
+            Self.getRemoteConfigData(config: config) { rawConfig, _, _ in
                 guard let rawConfig else {
                     group.leave()
                     return
@@ -954,7 +1066,7 @@ class RemoteConfigManager {
     }
 
     static func updateConfig(config: RemoteConfigModel, complete: ((String?) -> Void)? = nil) {
-        getRemoteConfigData(config: config) { configString, suggestedFilename in
+        getRemoteConfigData(config: config) { configString, suggestedFilename, responseHeaders in
             guard let rawConfig = configString else {
                 complete?(NSLocalizedString("Download fail", comment: ""))
                 return
@@ -974,6 +1086,13 @@ class RemoteConfigManager {
             let generatedInfo = classifyGeneratedTemplate(rawConfig: rawConfig, finalConfig: newConfig)
             config.generatedByShareLinks = generatedInfo.generatedByShareLinks
             config.generatedTemplateVersion = generatedInfo.templateVersion
+
+            let headerInfo = parseSubscriptionUserinfoHeader(responseHeaders)
+            let bodyInfo = parseSubscriptionInfoFromBody(rawConfig)
+            config.subscriptionInfo = SubscriptionInfo.merging(primary: headerInfo, fallback: bodyInfo)
+            if let info = config.subscriptionInfo {
+                Logger.log("[Remote Config] Captured subscription info for \(config.name): upload=\(info.upload ?? -1) download=\(info.download ?? -1) total=\(info.total ?? -1) expire=\(info.expire ?? 0) expireText=\(info.expireText ?? "-")")
+            }
 
             let verifyRes = verifyConfig(string: newConfig)
             if let error = verifyRes {
